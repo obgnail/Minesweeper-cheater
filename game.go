@@ -39,6 +39,8 @@ const (
 	// 程序在策略3和策略4使用
 	CellTypeMine CellType = 8
 	CellTypeSafe CellType = 9
+	// 优化使用
+	CellTypeSafe2 CellType = 10
 )
 
 func PlayGame() {
@@ -110,6 +112,9 @@ func ValueEqualFlagAndUnknown(row, col int) {
 	case flagNum:
 		if unknownNum != 0 {
 			logrus.Debugf("--Strategy 1 [cell clear]: (%d,%d) [value=%d]", row, col, value)
+			for _, cell := range neighbors[CellTypeUnknown] {
+				setTableCell(cell.row, cell.col, CellTypeSafe2)
+			}
 			ClearCell(row, col)
 		}
 		SetFinish(row, col)
@@ -308,6 +313,11 @@ func GetCellType(row, col int) CellType {
 		return 0
 	}
 	return table[row][col]
+}
+
+// Warn:优化使用的函数,没事别改动table元素的值
+func setTableCell(row, col int, cellType CellType) {
+	table[row][col] = cellType
 }
 
 type Cell struct {
