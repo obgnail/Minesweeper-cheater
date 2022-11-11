@@ -7,11 +7,6 @@ import (
 )
 
 const (
-	title     = "扫雷"
-	sleepTime = time.Millisecond * 300
-)
-
-const (
 	xWindow  = 0
 	yWindow  = 0
 	cxWindow = 1000
@@ -24,21 +19,21 @@ const (
 func InitWindow() {
 	logrus.SetLevel(logrus.DebugLevel)
 
-	hWnd, err := FindWindow("", title)
+	hWnd, err := FindWindow("", processTitle)
 	if err != nil {
 		log.Fatal(err)
 	}
-	logrus.Debugf("Found '%s' window: handle=0x%x", title, hWnd)
+	logrus.Debugf("Found '%s' window: handle=0x%x", processTitle, hWnd)
 
 	if err = SetWindowPos(hWnd, xWindow, yWindow, cxWindow, cyWindow); err != nil {
 		log.Fatal(err)
 	}
-	logrus.Debugf("Set '%s' window Pos: x=%d, y=%d, cx=%d, cy=%d", title, xWindow, yWindow, cxWindow, cyWindow)
+	logrus.Debugf("Set '%s' window Pos: x=%d, y=%d, cx=%d, cy=%d", processTitle, xWindow, yWindow, cxWindow, cyWindow)
 
 	if err = SetForegroundWindow(hWnd); err != nil {
 		log.Fatal(err)
 	}
-	logrus.Debugf("Foreground '%s' window", title)
+	logrus.Debugf("Foreground '%s' window", processTitle)
 }
 
 func MoveMouse(row, col int) {
@@ -46,7 +41,7 @@ func MoveMouse(row, col int) {
 	if err := SetCursorPos(x, y); err != nil {
 		panic(err)
 	}
-	time.Sleep(sleepTime)
+	time.Sleep(clickInterval)
 }
 
 func RowCol2XY(row, col int) (x int32, y int32) {
@@ -60,7 +55,7 @@ func click(buttonType int, row, col int) {
 	if _, err := MouseClick(buttonType, x, y); err != nil {
 		panic(err)
 	}
-	time.Sleep(sleepTime)
+	time.Sleep(clickInterval)
 }
 
 func doubleClick(buttonType int, row, col int) {
@@ -68,5 +63,5 @@ func doubleClick(buttonType int, row, col int) {
 	if _, err := MouseDoubleClick(buttonType, x, y); err != nil {
 		panic(err)
 	}
-	time.Sleep(sleepTime)
+	time.Sleep(clickInterval)
 }

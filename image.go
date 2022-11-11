@@ -43,14 +43,19 @@ var matchMap = map[string]CellType{
 	"6-2.jpg": CellTypeSix,
 	"7-2.jpg": CellTypeSeven,
 
-	"flag-1.jpg":    CellTypeFlag,
-	"flag-2.jpg":    CellTypeFlag,
-	"flag-3.jpg":    CellTypeFlag,
-	"flag-4.jpg":    CellTypeFlag,
 	"unknown-1.jpg": CellTypeUnknown,
 	"unknown-2.jpg": CellTypeUnknown,
 	"unknown-3.jpg": CellTypeUnknown,
 	"unknown-4.jpg": CellTypeUnknown,
+}
+
+func InitFlag() {
+	if ShowFlag {
+		matchMap["flag-1.jpg"] = CellTypeFlag
+		matchMap["flag-2.jpg"] = CellTypeFlag
+		matchMap["flag-3.jpg"] = CellTypeFlag
+		matchMap["flag-4.jpg"] = CellTypeFlag
+	}
 }
 
 func InitStore() {

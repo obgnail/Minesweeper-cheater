@@ -20,6 +20,7 @@ var (
 
 	table  [rowNum][colNum]CellType
 	finish [rowNum][colNum]bool // finish cells
+	flag   [rowNum][colNum]bool // flag cells
 )
 
 type CellType int
@@ -50,9 +51,9 @@ func PlayGame() {
 		// 分三次迭代后，场上能排出更多的flag,提高效率
 		f1 := ignoreZeroCellDeco(ValueEqualFlagAndUnknown)
 		f2 := ignoreZeroCellDeco(InductionOnUnknowns)
-		IterTable(false, f1)
-		IterTable(true, f1)
-		IterTable(false, f2)
+		Iter(false, f1)
+		Iter(true, f1)
+		Iter(false, f2)
 		if !progress {
 			RandomPick() // 没有进展时随机选择
 		}
@@ -64,8 +65,8 @@ func PlayGame() {
 func PlayGame2() {
 	for !Done() {
 		RenewTable()
-		IterTable(false, ValueEqualFlagAndUnknown)
-		IterTable(false, InductionOnUnknowns)
+		Iter(false, ValueEqualFlagAndUnknown)
+		Iter(false, InductionOnUnknowns)
 		if !progress {
 			RandomPick()
 		}
@@ -76,7 +77,7 @@ func PlayGame2() {
 func Done() bool {
 	// NOTE：当剩下的全部都是雷的时候，系统会直接判赢
 	unknown := 0
-	IterTable(false, func(row, col int) {
+	Iter(false, func(row, col int) {
 		if GetCellType(row, col) == CellTypeUnknown {
 			unknown++
 		}
@@ -98,6 +99,9 @@ func Done() bool {
 func RenewTable() {
 	MoveMouse(rowNum, colNum) // 将鼠标移动到范围外，防止错误解析图片
 	table = Window2Table()
+	if !ShowFlag {
+		updateTable()
+	}
 }
 
 func ValueEqualFlagAndUnknown(row, col int) {
@@ -112,10 +116,7 @@ func ValueEqualFlagAndUnknown(row, col int) {
 	case flagNum:
 		if unknownNum != 0 {
 			logrus.Debugf("--Strategy 1 [cell clear]: (%d,%d) [value=%d]", row, col, value)
-			for _, cell := range neighbors[CellTypeUnknown] {
-				setTableCell(cell.row, cell.col, CellTypeSafe2)
-			}
-			ClearCell(row, col)
+			ClearCell(row, col, neighbors[CellTypeUnknown])
 		}
 		SetFinish(row, col)
 	case unknownNum + flagNum:
@@ -129,7 +130,7 @@ func ValueEqualFlagAndUnknown(row, col int) {
 
 func RandomPick() {
 	var pickTable []*Location
-	IterTable(false, func(row, col int) {
+	Iter(false, func(row, col int) {
 		if GetCellType(row, col) == CellTypeUnknown {
 			pickTable = append(pickTable, &Location{row: row, col: col})
 		}
@@ -281,7 +282,7 @@ func renewNeighbors(cell *Cell, situation *Situation) []*Cell {
 	return neighbors
 }
 
-func IterTable(reverse bool, f func(row, col int)) {
+func Iter(reverse bool, f func(row, col int)) {
 	if !reverse {
 		for row := 0; row != rowNum; row++ {
 			for col := 0; col != colNum; col++ {
@@ -496,10 +497,20 @@ func IsNumberCellType(cellType CellType) bool {
 	return 0 < t && t < 8
 }
 
-func ClearCell(row, col int) {
-	logrus.Debugf("双击: (%d,%d)", row, col)
+func ClearCell(row, col int, unknownCell []*Cell) {
 	progress = true
-	doubleClick(LeftButton, row, col)
+	// 只有标记了flag的情况下才可以使用双击,否则需要一个个去点
+	if ShowFlag {
+		logrus.Debugf("双击: (%d,%d)", row, col)
+		doubleClick(LeftButton, row, col)
+	} else {
+		for _, cell := range unknownCell {
+			FlagSafe(cell.row, cell.col)
+		}
+	}
+	for _, cell := range unknownCell {
+		setTableCell(cell.row, cell.col, CellTypeSafe2)
+	}
 	SetFinish(row, col)
 }
 
@@ -510,11 +521,14 @@ func FlagSafe(row, col int) {
 }
 
 func FlagMine(row, col int) {
-	logrus.Debugf("标记地雷: (%d,%d)", row, col)
 	progress = true
 	remainMine--
-	click(RightButton, row, col)
 	table[row][col] = CellTypeFlag
+	flag[row][col] = true
+	if ShowFlag {
+		logrus.Debugf("标记地雷: (%d,%d)", row, col)
+		click(RightButton, row, col)
+	}
 }
 
 func unique(cells []*Cell) []*Cell {
@@ -528,6 +542,14 @@ func unique(cells []*Cell) []*Cell {
 		res = append(res, cell)
 	}
 	return res
+}
+
+func updateTable() {
+	Iter(false, func(row, col int) {
+		if flag[row][col] == true {
+			setTableCell(row, col, CellTypeFlag)
+		}
+	})
 }
 
 func InitTable() {
