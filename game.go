@@ -171,6 +171,7 @@ func InductionOnUnknowns(row, col int) {
 			case CellTypeSafe:
 				//Logger.Debug("Strategy3(FlagSafe):")
 				FlagSafe(s.row, s.col)
+				setTableCell(s.row, s.col, CellTypeSafe2)
 			case CellTypeMine:
 				//Logger.Debug("Strategy4(FlagMine):")
 				FlagMine(s.row, s.col)
@@ -213,6 +214,7 @@ func InductionOnUnknowns(row, col int) {
 			for _, s := range safe {
 				//Logger.Debugf("Strategy3(FlagSafe)")
 				FlagSafe(s.row, s.col)
+				setTableCell(s.row, s.col, CellTypeSafe2)
 			}
 			for _, m := range mine {
 				//Logger.Debug("Strategy4(FlagMine):")
@@ -291,7 +293,7 @@ func Iter(reverse bool, f func(row, col int)) {
 			}
 		}
 	} else {
-		for col := 0; col != colNum; col++ {
+		for col := colNum - 1; col != -1; col-- {
 			for row := rowNum - 1; row != -1; row-- {
 				f(row, col)
 			}
