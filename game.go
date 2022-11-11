@@ -284,7 +284,7 @@ func IterTable(reverse bool, f func(row, col int)) {
 			}
 		}
 	} else {
-		for col := colNum - 1; col != -1; col-- {
+		for col := 0; col != colNum; col++ {
 			for row := rowNum - 1; row != -1; row-- {
 				f(row, col)
 			}
@@ -447,13 +447,28 @@ func GetNeighborList(row, col int) []*Cell {
 	return res
 }
 
+// 包含一级邻居 和 以unknownCell为中心的二级邻居
 func GetUnfinishedNumberNeighbors(row, col int) []*Cell {
-	var res []*Cell
+	var cells []*Cell
+	var unknown []*Cell
 	GetNeighborsByFunc(row, col, func(idx int, cell *Cell) {
 		if cell.IsLegal() && IsNumberCellType(cell.CellType) && !IsFinish(cell.row, cell.col) {
-			res = append(res, cell)
+			cells = append(cells, cell)
+		}
+		if cell.CellType == CellTypeUnknown {
+			unknown = append(unknown, cell)
 		}
 	})
+
+	for _, c := range unknown {
+		GetNeighborsByFunc(c.row, c.col, func(idx int, cell *Cell) {
+			if cell.IsLegal() && IsNumberCellType(cell.CellType) && !IsFinish(cell.row, cell.col) {
+				cells = append(cells, cell)
+			}
+		})
+	}
+
+	res := unique(cells)
 	return res
 }
 
@@ -490,6 +505,19 @@ func FlagMine(row, col int) {
 	remainMine--
 	click(RightButton, row, col)
 	table[row][col] = CellTypeFlag
+}
+
+func unique(cells []*Cell) []*Cell {
+	m := make(map[string]*Cell)
+	for _, c := range cells {
+		key := fmt.Sprintf("%d-%d", c.row, c.col)
+		m[key] = c
+	}
+	var res []*Cell
+	for _, cell := range m {
+		res = append(res, cell)
+	}
+	return res
 }
 
 func InitTable() {
