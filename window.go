@@ -8,7 +8,7 @@ import (
 
 const (
 	title     = "扫雷"
-	sleepTime = time.Millisecond * 200
+	sleepTime = time.Millisecond * 250
 )
 
 const (
