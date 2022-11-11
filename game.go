@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -44,11 +43,11 @@ const (
 	CellTypeSafe2 CellType = 10
 )
 
-func PlayGame() {
+func Play() {
 	for !Done() {
 		RenewTable()
 		// 正常来说只要将ValueEqualFlagAndUnknown和inductionOnUnknowns放在一个循环上就行了。
-		// 分三次迭代后，场上能排出更多的flag,提高效率
+		// 分四次迭代后，场上能排出更多的flag,提高效率
 		f1 := ignoreZeroCellDeco(ValueEqualFlagAndUnknown)
 		f2 := ignoreZeroCellDeco(InductionOnUnknowns)
 		Iter(false, f1)
@@ -59,6 +58,7 @@ func PlayGame() {
 		}
 		progress = false
 	}
+	Logger.Info("--- done ---")
 }
 
 // 效果等同于PlayGame,不过效率不佳
@@ -99,7 +99,7 @@ func Done() bool {
 func RenewTable() {
 	MoveMouse(rowNum, colNum) // 将鼠标移动到范围外，防止错误解析图片
 	table = Window2Table()
-	if !ShowFlag {
+	if !showFlag {
 		updateTable()
 	}
 }
@@ -115,12 +115,12 @@ func ValueEqualFlagAndUnknown(row, col int) {
 		SetFinish(row, col)
 	case flagNum:
 		if unknownNum != 0 {
-			logrus.Debugf("--Strategy 1 [cell clear]: (%d,%d) [value=%d]", row, col, value)
+			//Logger.Debug("Strategy1(ClearCell):")
 			ClearCell(row, col, neighbors[CellTypeUnknown])
 		}
 		SetFinish(row, col)
 	case unknownNum + flagNum:
-		logrus.Debugf("--Strategy 2 [flag mine]: (%d,%d) [value=%d]", row, col, value)
+		//Logger.Debug("Strategy2(MineFlag):")
 		for _, cell := range neighbors[CellTypeUnknown] {
 			FlagMine(cell.row, cell.col)
 		}
@@ -139,8 +139,8 @@ func RandomPick() {
 	rand.Seed(time.Now().Unix())
 	idx := rand.Intn(len(pickTable))
 	c := pickTable[idx]
-	logrus.Debugf("--Strategy 5 [random pick]: (%d,%d)", c.row, c.col)
-	FlagSafe(c.row, c.col)
+	//Logger.Debug("Strategy5(RandomPick):")
+	randomPick(c.row, c.col)
 }
 
 func InductionOnUnknowns(row, col int) {
@@ -168,11 +168,12 @@ func InductionOnUnknowns(row, col int) {
 	case 1:
 		for _, s := range passSituations[0].cells {
 			switch s.CellType {
-			case CellTypeMine:
-				logrus.Debugf("--Strategy 3 [flag safe]: (%d,%d)", row, col)
-				FlagMine(s.row, s.col)
 			case CellTypeSafe:
+				//Logger.Debug("Strategy3(FlagSafe):")
 				FlagSafe(s.row, s.col)
+			case CellTypeMine:
+				//Logger.Debug("Strategy4(FlagMine):")
+				FlagMine(s.row, s.col)
 			}
 		}
 	default:
@@ -210,11 +211,11 @@ func InductionOnUnknowns(row, col int) {
 			mine := toLocation(mineResolve, len(passSituations))
 
 			for _, s := range safe {
-				logrus.Debugf("--Strategy 3 [flag safe]: (%d,%d)", row, col)
+				//Logger.Debugf("Strategy3(FlagSafe)")
 				FlagSafe(s.row, s.col)
 			}
 			for _, m := range mine {
-				logrus.Debugf("--Strategy 4 [flag mine]: (%d,%d)", row, col)
+				//Logger.Debug("Strategy4(FlagMine):")
 				FlagMine(m.row, m.col)
 			}
 		}
@@ -500,8 +501,8 @@ func IsNumberCellType(cellType CellType) bool {
 func ClearCell(row, col int, unknownCell []*Cell) {
 	progress = true
 	// 只有标记了flag的情况下才可以使用双击,否则需要一个个去点
-	if ShowFlag {
-		logrus.Debugf("双击: (%d,%d)", row, col)
+	if showFlag {
+		Logger.Debugf("DoubleClick: (%d,%d)", row, col)
 		doubleClick(LeftButton, row, col)
 	} else {
 		for _, cell := range unknownCell {
@@ -514,8 +515,14 @@ func ClearCell(row, col int, unknownCell []*Cell) {
 	SetFinish(row, col)
 }
 
+func randomPick(row, col int) {
+	Logger.Debugf("RadomPick: (%d,%d)", row, col)
+	progress = true
+	click(LeftButton, row, col)
+}
+
 func FlagSafe(row, col int) {
-	logrus.Debugf("标记安全: (%d,%d)", row, col)
+	Logger.Debugf("FlagSafe: (%d,%d)", row, col)
 	progress = true
 	click(LeftButton, row, col)
 }
@@ -525,8 +532,8 @@ func FlagMine(row, col int) {
 	remainMine--
 	table[row][col] = CellTypeFlag
 	flag[row][col] = true
-	if ShowFlag {
-		logrus.Debugf("标记地雷: (%d,%d)", row, col)
+	if showFlag {
+		Logger.Debugf("FlagMine: (%d,%d)", row, col)
 		click(RightButton, row, col)
 	}
 }

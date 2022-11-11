@@ -1,8 +1,6 @@
 package main
 
 import (
-	"github.com/sirupsen/logrus"
-	"log"
 	"time"
 )
 
@@ -17,23 +15,21 @@ const (
 )
 
 func InitWindow() {
-	logrus.SetLevel(logrus.DebugLevel)
-
 	hWnd, err := FindWindow("", processTitle)
 	if err != nil {
-		log.Fatal(err)
+		Logger.Fatal(err)
 	}
-	logrus.Debugf("Found '%s' window: handle=0x%x", processTitle, hWnd)
+	Logger.Debugf("Found '%s' window: handle=0x%x", processTitle, hWnd)
 
 	if err = SetWindowPos(hWnd, xWindow, yWindow, cxWindow, cyWindow); err != nil {
-		log.Fatal(err)
+		Logger.Fatal(err)
 	}
-	logrus.Debugf("Set '%s' window Pos: x=%d, y=%d, cx=%d, cy=%d", processTitle, xWindow, yWindow, cxWindow, cyWindow)
+	Logger.Debugf("Set '%s' window Pos: x=%d, y=%d, cx=%d, cy=%d", processTitle, xWindow, yWindow, cxWindow, cyWindow)
 
 	if err = SetForegroundWindow(hWnd); err != nil {
-		log.Fatal(err)
+		Logger.Fatal(err)
 	}
-	logrus.Debugf("Foreground '%s' window", processTitle)
+	Logger.Debugf("Foreground '%s' window", processTitle)
 }
 
 func MoveMouse(row, col int) {

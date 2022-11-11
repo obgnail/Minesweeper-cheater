@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/kbinani/screenshot"
 	"github.com/rivo/duplo"
-	"github.com/sirupsen/logrus"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -50,7 +49,7 @@ var matchMap = map[string]CellType{
 }
 
 func InitFlag() {
-	if ShowFlag {
+	if showFlag {
 		matchMap["flag-1.jpg"] = CellTypeFlag
 		matchMap["flag-2.jpg"] = CellTypeFlag
 		matchMap["flag-3.jpg"] = CellTypeFlag
@@ -92,13 +91,13 @@ func OpenImage(imagePath string) (image.Image, error) {
 }
 
 func Window2Table() [rowNum][colNum]CellType {
-	logrus.Debug("--- Parsing Window To Table ---")
+	Logger.Debug("Parsing Window...")
 	img, err := screenshot.Capture(startX, startY, endX-startX, endY-startY)
 	if err != nil {
 		panic(err)
 	}
 	res := ParseImageToTable(img)
-	logrus.Debug("--- Set Table Done ---")
+	Logger.Debug("Start Analyzing...")
 	return res
 }
 
