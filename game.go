@@ -40,7 +40,7 @@ const (
 	CellTypeMine CellType = 8 // 猜测是雷
 	CellTypeSafe CellType = 9 // 猜测不是雷
 	// 用于优化
-	CellTypeSafe2 CellType = 10
+	CellTypeDone CellType = 10 // 标记已处理,避免重复处理
 )
 
 func Play() {
@@ -248,36 +248,12 @@ func handleAlwaysCell(cells []*Cell) {
 		case CellTypeSafe:
 			//Logger.Debug("Strategy3(FlagSafe):")
 			FlagSafe(cell.row, cell.col)
-			setTableCell(cell.row, cell.col, CellTypeSafe2)
+			setTableCell(cell.row, cell.col, CellTypeDone)
 		case CellTypeMine:
 			//Logger.Debug("Strategy4(FlagMine):")
 			FlagMine(cell.row, cell.col)
 		}
 	}
-}
-
-func handlePassSituation333(passSituation *Situation) {
-	passSituation.RangeCell(func(idx int, cell *Cell) (stop bool) {
-		switch cell.CellType {
-		case CellTypeSafe:
-			//Logger.Debug("Strategy3(FlagSafe):")
-			FlagSafe(cell.row, cell.col)
-			setTableCell(cell.row, cell.col, CellTypeSafe2)
-		case CellTypeMine:
-			//Logger.Debug("Strategy4(FlagMine):")
-			FlagMine(cell.row, cell.col)
-		}
-		return false
-	})
-}
-
-func resolveSituation2(cell *Cell, neighbors map[CellType][]*Cell) (safe []*Cell, mine []*Cell) {
-	if len(neighbors[CellTypeMine])+len(neighbors[CellTypeFlag]) != int(cell.CellType) {
-		return nil, nil
-	}
-	safe = neighbors[CellTypeSafe]
-	mine = neighbors[CellTypeMine]
-	return safe, mine
 }
 
 // 根据situation,解出所有的Unknown
@@ -407,10 +383,10 @@ func IsSituationPass(cell *Cell, situation *Situation) bool {
 
 	value := int(cell.CellType)
 	m := GetNeighborMap(cell.row, cell.col)
-	flag := len(m[CellTypeFlag])
-	unknown := len(m[CellTypeUnknown])
+	_flag := len(m[CellTypeFlag])
+	_unknown := len(m[CellTypeUnknown])
 
-	if isMine+flag > value || unknown+flag < value {
+	if isMine+_flag > value || _unknown+_flag < value {
 		return false
 	}
 	return true
@@ -566,8 +542,9 @@ func ClearCell(row, col int, unknownCell []*Cell) {
 			FlagSafe(cell.row, cell.col)
 		}
 	}
+
 	for _, cell := range unknownCell {
-		setTableCell(cell.row, cell.col, CellTypeSafe2)
+		setTableCell(cell.row, cell.col, CellTypeDone)
 	}
 	SetFinish(row, col)
 }
