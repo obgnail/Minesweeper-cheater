@@ -39,7 +39,7 @@ const (
 	// 程序在策略3-6使用
 	CellTypeMine CellType = 8 // 猜测是雷
 	CellTypeSafe CellType = 9 // 猜测不是雷
-	// 用于优化
+
 	CellTypeDone CellType = 10 // 标记已处理,避免重复处理
 )
 
@@ -248,7 +248,6 @@ func handleAlwaysCell(cells []*Cell) {
 		case CellTypeSafe:
 			//Logger.Debug("Strategy3(FlagSafe):")
 			FlagSafe(cell.row, cell.col)
-			setTableCell(cell.row, cell.col, CellTypeDone)
 		case CellTypeMine:
 			//Logger.Debug("Strategy4(FlagMine):")
 			FlagMine(cell.row, cell.col)
@@ -537,14 +536,13 @@ func ClearCell(row, col int, unknownCell []*Cell) {
 	if showFlag {
 		Logger.Debugf("DoubleClick: (%d,%d)", row, col)
 		doubleClick(LeftButton, row, col)
+		for _, cell := range unknownCell {
+			setTableCell(cell.row, cell.col, CellTypeDone)
+		}
 	} else {
 		for _, cell := range unknownCell {
 			FlagSafe(cell.row, cell.col)
 		}
-	}
-
-	for _, cell := range unknownCell {
-		setTableCell(cell.row, cell.col, CellTypeDone)
 	}
 	SetFinish(row, col)
 }
@@ -553,23 +551,31 @@ func randomPick(row, col int) {
 	Logger.Debugf("RadomPick: (%d,%d)", row, col)
 	progress = true
 	click(LeftButton, row, col)
+	setTableCell(row, col, CellTypeDone)
 }
 
 func FlagSafe(row, col int) {
+	if GetCellType(row, col) == CellTypeDone {
+		return
+	}
 	Logger.Debugf("FlagSafe: (%d,%d)", row, col)
 	progress = true
 	click(LeftButton, row, col)
+	setTableCell(row, col, CellTypeDone)
 }
 
 func FlagMine(row, col int) {
+	if GetCellType(row, col) == CellTypeDone {
+		return
+	}
 	progress = true
 	remainMine--
-	table[row][col] = CellTypeFlag
 	flag[row][col] = true
 	if showFlag {
 		Logger.Debugf("FlagMine: (%d,%d)", row, col)
 		click(RightButton, row, col)
 	}
+	setTableCell(row, col, CellTypeFlag)
 }
 
 func unique(cells []*Cell) []*Cell {
