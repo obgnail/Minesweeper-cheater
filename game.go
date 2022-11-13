@@ -36,20 +36,20 @@ const (
 	CellTypeSix     CellType = 6
 	CellTypeSeven   CellType = 7
 
-	// 程序在策略3和策略4使用
-	CellTypeMine CellType = 8
-	CellTypeSafe CellType = 9
-	// 优化使用
+	// 程序在策略3-6使用
+	CellTypeMine CellType = 8 // 猜测是雷
+	CellTypeSafe CellType = 9 // 猜测不是雷
+	// 用于优化
 	CellTypeSafe2 CellType = 10
 )
 
 func Play() {
 	for !Done() {
 		RenewTable()
-		// 正常来说只要将ValueEqualFlagAndUnknown和inductionOnUnknowns放在一个循环上就行了。
+		// 正常来说只要将FindEqual和FindAlways放在一个循环上就行了。
 		// 分四次迭代后，场上能排出更多的flag,提高效率
-		f1 := ignoreZeroCellDeco(ValueEqualFlagAndUnknown)
-		f2 := ignoreZeroCellDeco(InductionOnUnknowns)
+		f1 := ignoreZeroCellDeco(FindEqual)
+		f2 := ignoreZeroCellDeco(FindAlways)
 		Range(false, f1)
 		Range(true, f1)
 		Range(false, f2)
@@ -62,11 +62,11 @@ func Play() {
 }
 
 // 效果等同于PlayGame,不过效率不佳
-func PlayGame2() {
+func Play2() {
 	for !Done() {
 		RenewTable()
-		Range(false, ValueEqualFlagAndUnknown)
-		Range(false, InductionOnUnknowns)
+		Range(false, FindEqual)
+		Range(false, FindAlways)
 		if !progress {
 			RandomPick()
 		}
@@ -98,13 +98,15 @@ func Done() bool {
 
 func RenewTable() {
 	MoveMouse(rowNum, colNum) // 将鼠标移动到范围外，防止错误解析图片
-	table = Window2Table()
+	table = Window2Table(IsFinish)
+	//table = Window2Table(nil)
 	if !showFlag {
 		updateTable()
 	}
 }
 
-func ValueEqualFlagAndUnknown(row, col int) {
+// 策略1-2: 数值=雷数 or 数值=未知单元格数+雷数
+func FindEqual(row, col int) {
 	neighbors := GetNeighborMap(row, col)
 	unknownNum := len(neighbors[CellTypeUnknown])
 	flagNum := len(neighbors[CellTypeFlag])
@@ -128,6 +130,7 @@ func ValueEqualFlagAndUnknown(row, col int) {
 	}
 }
 
+// 策略7
 func RandomPick() {
 	var pickTable []*Location
 	Range(false, func(row, col int) {
@@ -143,31 +146,36 @@ func RandomPick() {
 	randomPick(c.row, c.col)
 }
 
-func InductionOnUnknowns(row, col int) {
+// 策略3-6：找出在所有情况中，总是雷 or 总是安全 的单元格
+// NOTE: Always:在所有的情况中总是
+func FindAlways(row, col int) {
 	unfinishedNumberNeighbors := GetUnfinishedNumberNeighbors(row, col)
 	passSituations := getAllPassSituations(row, col, unfinishedNumberNeighbors)
 
-	switch len(passSituations) {
+	switch l := len(passSituations); l {
 	case 0:
 		return
 	case 1:
-		handlePassSituationCell(passSituations[0].cells)
+		// 如果只有一种情况,说明所有单元格总是正确
+		handleAlwaysCell(passSituations[0].cells)
 	default:
+		// 如果多于一种情况,那么就要找出 总是雷 或 总是安全 的单元格
 		for _, tryCell := range unfinishedNumberNeighbors {
 			safeCountMap, mineCountMap := getCountMapByPassSituations(tryCell, passSituations)
-			l := len(passSituations)
-			safe := _getAlwaysPassCell(safeCountMap, l)
-			mine := _getAlwaysPassCell(mineCountMap, l)
-			handlePassSituationCell(safe)
-			handlePassSituationCell(mine)
+			safe := _getAlwaysCell(safeCountMap, l)
+			mine := _getAlwaysCell(mineCountMap, l)
+			handleAlwaysCell(safe)
+			handleAlwaysCell(mine)
 		}
 	}
 }
 
-func _getAlwaysPassCell(MapCellToCount map[*Cell]int, passSituations int) []*Cell {
+// 如果单元格是雷的次数不等于情况数，说明该单元格在所有情况中不总是雷
+// 同理，如果单元格安全的次数不等于情况数，说明该单元格在所有情况中不总是安全的
+func _getAlwaysCell(MapCellToCount map[*Cell]int, passSituationLength int) []*Cell {
 	var res []*Cell
 	for cell, count := range MapCellToCount {
-		if count == passSituations {
+		if count == passSituationLength {
 			res = append(res, cell)
 		}
 	}
@@ -234,7 +242,7 @@ func getAllPassSituations(row, col int, unfinishedNumberNeighbors []*Cell) []*Si
 	return passSituations
 }
 
-func handlePassSituationCell(cells []*Cell) {
+func handleAlwaysCell(cells []*Cell) {
 	for _, cell := range cells {
 		switch cell.CellType {
 		case CellTypeSafe:

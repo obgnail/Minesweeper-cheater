@@ -90,23 +90,29 @@ func OpenImage(imagePath string) (image.Image, error) {
 	return m, nil
 }
 
-func Window2Table() [rowNum][colNum]CellType {
+func Window2Table(skipFunc func(row, col int) bool) [rowNum][colNum]CellType {
 	Logger.Debug("Parsing Window...")
 	img, err := screenshot.Capture(startX, startY, endX-startX, endY-startY)
 	if err != nil {
 		panic(err)
 	}
-	res := ParseImageToTable(img)
+	res := ParseImageToTable(img, skipFunc)
 	Logger.Debug("Start Analyzing...")
 	return res
 }
 
-func ParseImageToTable(img *image.RGBA) [rowNum][colNum]CellType {
+func ParseImageToTable(img *image.RGBA, skipFunc func(row, col int) bool) [rowNum][colNum]CellType {
 	res := [rowNum][colNum]CellType{}
 	for row := 0; row != rowNum; row++ {
 		boxY := row * (endY - startY) / rowNum
 		nextBoxY := (row + 1) * (endY - startY) / rowNum
 		for col := 0; col != colNum; col++ {
+
+			// 跳过某些单元格,不去解析
+			if skipFunc != nil && skipFunc(row, col) {
+				continue
+			}
+
 			boxX := col * (endX - startX) / colNum
 			nextBoxX := (col + 1) * (endX - startX) / colNum
 			boxX, boxY, nextBoxX, nextBoxY = fixLen(boxX, boxY, nextBoxX, nextBoxY)
