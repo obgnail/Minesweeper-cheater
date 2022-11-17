@@ -183,7 +183,7 @@ func _getAlwaysCell(MapCellToCount map[*Cell]int, passSituationLength int) []*Ce
 }
 
 // 策略3-6最重要的函数
-// 解出 tryCell周围所有的未开发单元格 在所有可能成立的情况下，是 雷/不是雷 的次数
+// 解出 tryCell 周围所有的未开发单元格 在所有可能成立的情况下，是 雷/不是雷 的次数
 func getCountMapByPassSituations(tryCell *Cell, passSituations []*Situation) (map[*Cell]int, map[*Cell]int) {
 	safeCountMap := make(map[string]int)
 	mineCountMap := make(map[string]int)
@@ -255,37 +255,42 @@ func handleAlwaysCell(cells []*Cell) {
 	}
 }
 
-// 根据situation,解出所有的Unknown
-func resolveSituation(cell *Cell, situation *Situation) ([]*Cell, []*Cell) {
-	neighbors := GetNeighborList(cell.row, cell.col)
-	dugInSituation := 0
-
-	situation.RangeCell(func(idx int, cell *Cell) (stop bool) {
-		if cell.CellType != CellTypeMine && cell.CellType != CellTypeSafe {
+// 更新neighbors
+func renewNeighbor(neighbors []*Cell, situation *Situation) {
+	situation.RangeCell(func(idx int, c *Cell) (stop bool) {
+		if c.CellType != CellTypeMine && c.CellType != CellTypeSafe {
 			return false
 		}
 		for _, n := range neighbors {
-			if n.row == cell.row && n.col == cell.col {
-				n.CellType = cell.CellType
-
-				if cell.CellType == CellTypeMine {
-					dugInSituation++
-				}
+			if !(n.row == c.row && n.col == c.col) || n.CellType != CellTypeUnknown {
+				continue
 			}
+			n.CellType = c.CellType
+			break
 		}
 		return false
 	})
+}
 
-	dugInNeighbors := 0
+// 根据situation,解出所有的Unknown
+func resolveSituation(cell *Cell, situation *Situation) (safe []*Cell, mine []*Cell) {
+	neighbors := GetNeighborListBySituation(cell.row, cell.col, situation)
+	_flag, _unknown, _mine := 0, 0, 0
 	for _, n := range neighbors {
-		if n.CellType == CellTypeFlag {
-			dugInNeighbors++
+		switch n.CellType {
+		case CellTypeFlag:
+			_flag++
+		case CellTypeMine:
+			_mine++
+		case CellTypeUnknown:
+			_unknown++
 		}
 	}
 
+	value := int(cell.CellType)
 	for _, n := range neighbors {
 		if n.CellType == CellTypeUnknown {
-			if dugInSituation+dugInNeighbors < int(cell.CellType) {
+			if _mine+_flag < value {
 				n.CellType = CellTypeMine
 			} else {
 				n.CellType = CellTypeSafe
@@ -298,13 +303,40 @@ func resolveSituation(cell *Cell, situation *Situation) ([]*Cell, []*Cell) {
 		mapByType[n.CellType] = append(mapByType[n.CellType], n)
 	}
 
-	if len(mapByType[CellTypeMine])+len(mapByType[CellTypeFlag]) != int(cell.CellType) {
+	if len(mapByType[CellTypeMine])+len(mapByType[CellTypeFlag]) != value {
 		return nil, nil
 	}
-	safe := mapByType[CellTypeSafe]
-	mine := mapByType[CellTypeMine]
+	safe = mapByType[CellTypeSafe]
+	mine = mapByType[CellTypeMine]
 
 	return safe, mine
+}
+
+func diff(l1 []*Cell, l2 []*Cell) (l1Only []*Cell, common []*Cell, l2Only []*Cell) {
+	l1Map := make(map[string]*Cell)
+	l2Map := make(map[string]*Cell)
+	for _, cell := range l1 {
+		key := fmt.Sprintf("%d-%d", cell.row, cell.col)
+		l1Map[key] = cell
+	}
+	for _, cell := range l2 {
+		key := fmt.Sprintf("%d-%d", cell.row, cell.col)
+		l2Map[key] = cell
+	}
+
+	for key, cell := range l1Map {
+		if _, ok := l2Map[key]; ok {
+			common = append(common, cell)
+		} else {
+			l1Only = append(l1Only, cell)
+		}
+	}
+	for key, cell := range l2Map {
+		if _, ok := l1Map[key]; !ok {
+			l2Only = append(l2Only, cell)
+		}
+	}
+	return
 }
 
 func Range(reverse bool, f func(row, col int)) {
@@ -375,22 +407,30 @@ func (l *Location) IsLegal() bool {
 	return true
 }
 
+//func IsNeighborLegal(cellValue CellType, mine, flag, unknown int) bool {
+//	value := int(cellValue)
+//	if mine+flag > value || unknown+flag < value {
+//		return false
+//	}
+//	return true
+//}
+
 // 对于cell来说,情况是否可能成立
 func IsSituationPass(cell *Cell, situation *Situation) bool {
-	isMine := 0
-	situation.RangeCell(func(idx int, cell *Cell) (stop bool) {
-		if cell.CellType == CellTypeMine && cell.IsNeighbor(cell.row, cell.col) {
-			isMine++
+	neighbors := GetNeighborListBySituation(cell.row, cell.col, situation)
+	_flag, _unknown, _mine := 0, 0, 0
+	for _, n := range neighbors {
+		switch n.CellType {
+		case CellTypeFlag:
+			_flag++
+		case CellTypeMine:
+			_mine++
+		case CellTypeUnknown:
+			_unknown++
 		}
-		return false
-	})
-
+	}
 	value := int(cell.CellType)
-	m := GetNeighborMap(cell.row, cell.col)
-	_flag := len(m[CellTypeFlag])
-	_unknown := len(m[CellTypeUnknown])
-
-	if isMine+_flag > value || _unknown+_flag < value {
+	if _mine+_flag > value || _unknown+_mine+_flag < value {
 		return false
 	}
 	return true
@@ -494,6 +534,12 @@ func GetNeighborList(row, col int) []*Cell {
 		res = append(res, cell)
 	})
 	return res
+}
+
+func GetNeighborListBySituation(row, col int, situation *Situation) []*Cell {
+	neighbors := GetNeighborList(row, col)
+	renewNeighbor(neighbors, situation)
+	return neighbors
 }
 
 // 包含一级邻居 和 以unknownCell为中心的二级邻居
