@@ -267,10 +267,11 @@ func resolveSituation(cell *Cell, situation *Situation) ([]*Cell, []*Cell) {
 		for _, n := range neighbors {
 			if n.row == cell.row && n.col == cell.col {
 				n.CellType = cell.CellType
+
+				if cell.CellType == CellTypeMine {
+					dugInSituation++
+				}
 			}
-		}
-		if cell.CellType == CellTypeMine {
-			dugInSituation++
 		}
 		return false
 	})
