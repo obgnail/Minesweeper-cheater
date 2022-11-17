@@ -161,9 +161,9 @@ func FindAlways(row, col int) {
 	default:
 		// 如果多于一种情况,那么就要找出 总是雷 或 总是安全 的单元格
 		for _, tryCell := range unfinishedNumberNeighbors {
-			safeCountMap, mineCountMap := getCountMapByPassSituations(tryCell, passSituations)
-			safe := _getAlwaysCell(safeCountMap, l)
-			mine := _getAlwaysCell(mineCountMap, l)
+			okCount, safeCountMap, mineCountMap := getCountMapByPassSituations(tryCell, passSituations)
+			safe := _getAlwaysCell(safeCountMap, okCount)
+			mine := _getAlwaysCell(mineCountMap, okCount)
 			handleAlwaysCell(safe)
 			handleAlwaysCell(mine)
 		}
@@ -184,12 +184,17 @@ func _getAlwaysCell(MapCellToCount map[*Cell]int, passSituationLength int) []*Ce
 
 // 策略3-6最重要的函数
 // 解出 tryCell 周围所有的未开发单元格 在所有可能成立的情况下，是 雷/不是雷 的次数
-func getCountMapByPassSituations(tryCell *Cell, passSituations []*Situation) (map[*Cell]int, map[*Cell]int) {
+func getCountMapByPassSituations(tryCell *Cell, passSituations []*Situation) (int, map[*Cell]int, map[*Cell]int) {
 	safeCountMap := make(map[string]int)
 	mineCountMap := make(map[string]int)
+	okCount := len(passSituations)
 	for _, situation := range passSituations {
-		safeCell, mineCell := resolveSituation(tryCell, situation)
+		_unique, safeCell, mineCell := resolveSituation(tryCell, situation)
+		if !_unique {
+			continue
+		}
 		if len(safeCell) == 0 || len(mineCell) == 0 {
+			okCount--
 			continue // 此策略是不合理的
 		}
 		for _, cell := range safeCell {
@@ -220,7 +225,7 @@ func getCountMapByPassSituations(tryCell *Cell, passSituations []*Situation) (ma
 	safe := toCell(safeCountMap, CellTypeSafe)
 	mine := toCell(mineCountMap, CellTypeMine)
 
-	return safe, mine
+	return okCount, safe, mine
 }
 
 // 通过(row,col)的邻居、二级邻居筛掉不可能成立的情况，返回所有可能成立的情况
@@ -273,7 +278,7 @@ func renewNeighbor(neighbors []*Cell, situation *Situation) {
 }
 
 // 根据situation,解出所有的Unknown
-func resolveSituation(cell *Cell, situation *Situation) (safe []*Cell, mine []*Cell) {
+func resolveSituation(cell *Cell, situation *Situation) (unique bool, safe []*Cell, mine []*Cell) {
 	neighbors := GetNeighborListBySituation(cell.row, cell.col, situation)
 	_flag, _unknown, _mine := 0, 0, 0
 	for _, n := range neighbors {
@@ -288,6 +293,11 @@ func resolveSituation(cell *Cell, situation *Situation) (safe []*Cell, mine []*C
 	}
 
 	value := int(cell.CellType)
+	// 存在多个解
+	if _flag+_mine != value && _unknown+_flag+_mine != value {
+		unique = false
+		return
+	}
 	for _, n := range neighbors {
 		if n.CellType == CellTypeUnknown {
 			if _mine+_flag < value {
@@ -304,12 +314,12 @@ func resolveSituation(cell *Cell, situation *Situation) (safe []*Cell, mine []*C
 	}
 
 	if len(mapByType[CellTypeMine])+len(mapByType[CellTypeFlag]) != value {
-		return nil, nil
+		return true, nil, nil
 	}
 	safe = mapByType[CellTypeSafe]
 	mine = mapByType[CellTypeMine]
 
-	return safe, mine
+	return true, safe, mine
 }
 
 func diff(l1 []*Cell, l2 []*Cell) (l1Only []*Cell, common []*Cell, l2Only []*Cell) {
