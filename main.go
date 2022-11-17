@@ -7,6 +7,4 @@ func main() {
 	InitTable()
 	InitStore()
 	Play()
-	//RenewTable()
-	//Range(false, FindAlways)
 }

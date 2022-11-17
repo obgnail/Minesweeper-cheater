@@ -61,7 +61,7 @@ func Play() {
 	Logger.Info("--- done ---")
 }
 
-// 效果等同于PlayGame,不过效率不佳
+// 效果等同于Play,不过效率不佳
 func Play2() {
 	for !Done() {
 		RenewTable()
@@ -98,8 +98,8 @@ func Done() bool {
 
 func RenewTable() {
 	MoveMouse(rowNum, colNum) // 将鼠标移动到范围外，防止错误解析图片
-	table = Window2Table(IsFinish)
 	//table = Window2Table(nil)
+	table = Window2Table(IsFinish)
 	if !showFlag {
 		updateTable()
 	}
@@ -294,7 +294,7 @@ func resolveSituation(cell *Cell, situation *Situation) (unique bool, safe []*Ce
 
 	value := int(cell.CellType)
 	// 存在多个解
-	if _flag+_mine != value && _unknown+_flag+_mine != value {
+	if _flag+_mine < value && value < _unknown+_flag+_mine {
 		unique = false
 		return
 	}
@@ -320,33 +320,6 @@ func resolveSituation(cell *Cell, situation *Situation) (unique bool, safe []*Ce
 	mine = mapByType[CellTypeMine]
 
 	return true, safe, mine
-}
-
-func diff(l1 []*Cell, l2 []*Cell) (l1Only []*Cell, common []*Cell, l2Only []*Cell) {
-	l1Map := make(map[string]*Cell)
-	l2Map := make(map[string]*Cell)
-	for _, cell := range l1 {
-		key := fmt.Sprintf("%d-%d", cell.row, cell.col)
-		l1Map[key] = cell
-	}
-	for _, cell := range l2 {
-		key := fmt.Sprintf("%d-%d", cell.row, cell.col)
-		l2Map[key] = cell
-	}
-
-	for key, cell := range l1Map {
-		if _, ok := l2Map[key]; ok {
-			common = append(common, cell)
-		} else {
-			l1Only = append(l1Only, cell)
-		}
-	}
-	for key, cell := range l2Map {
-		if _, ok := l1Map[key]; !ok {
-			l2Only = append(l2Only, cell)
-		}
-	}
-	return
 }
 
 func Range(reverse bool, f func(row, col int)) {
@@ -416,14 +389,6 @@ func (l *Location) IsLegal() bool {
 	}
 	return true
 }
-
-//func IsNeighborLegal(cellValue CellType, mine, flag, unknown int) bool {
-//	value := int(cellValue)
-//	if mine+flag > value || unknown+flag < value {
-//		return false
-//	}
-//	return true
-//}
 
 // 对于cell来说,情况是否可能成立
 func IsSituationPass(cell *Cell, situation *Situation) bool {
