@@ -359,6 +359,10 @@ type Location struct {
 	col int
 }
 
+func (l *Location) Equal(row, col int) bool {
+	return l.row == row && l.col == col
+}
+
 func (l *Location) IsNeighbor(row, col int) bool {
 	return Abs(row-l.row) <= 1 && Abs(col-l.col) <= 1
 }
@@ -506,7 +510,7 @@ func GetUnfinishedNumberNeighbors(row, col int) []*Cell {
 
 	for _, c := range unknown {
 		GetNeighborsByFunc(c.row, c.col, func(idx int, cell *Cell) {
-			if cell.IsLegal() && IsNumberCellType(cell.CellType) && !IsFinish(cell.row, cell.col) {
+			if cell.IsLegal() && IsNumberCellType(cell.CellType) && !IsFinish(cell.row, cell.col) && !cell.Equal(row, col) {
 				cells = append(cells, cell)
 			}
 		})
