@@ -63,7 +63,7 @@ func InitStore() {
 		p := path.Join("image", key)
 		img, err := OpenImage(p)
 		if err != nil {
-			panic(err)
+			Logger.Fatal(err)
 		}
 		hash, _ := duplo.CreateHash(img)
 		store.Add(key, hash)
@@ -94,7 +94,7 @@ func Window2Table(skipFunc func(row, col int) bool) [rowNum][colNum]CellType {
 	Logger.Debug("Parsing Window...")
 	img, err := screenshot.Capture(startX, startY, endX-startX, endY-startY)
 	if err != nil {
-		panic(err)
+		Logger.Fatal(err)
 	}
 	res := ParseImageToTable(img, skipFunc)
 	Logger.Debug("Start Analyzing...")

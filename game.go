@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -55,10 +56,11 @@ func Play() {
 		Range(false, f2)
 		if !progress {
 			RandomPick() // 没有进展时随机选择
+			checkFail()  // 检查是否踩雷
 		}
 		progress = false
 	}
-	Logger.Info("--- done ---")
+	Logger.Info("--- DONE ---")
 }
 
 // 效果等同于Play,不过效率不佳
@@ -69,8 +71,20 @@ func Play2() {
 		Range(false, FindAlways)
 		if !progress {
 			RandomPick()
+			checkFail()
 		}
 		progress = false
+	}
+}
+
+func checkFail() {
+	doubleClick(LeftButton, rowNum, colNum)
+	doubleClick(LeftButton, rowNum, colNum) // 两次双击,给足够的时间让弹窗展示出来
+	failed := GameFailed()
+	if failed {
+		Logger.Info("--- FAILED, I am sorry ---")
+		AgainGame()
+		os.Exit(1)
 	}
 }
 

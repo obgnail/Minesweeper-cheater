@@ -32,10 +32,62 @@ func InitWindow() {
 	Logger.Debugf("Foreground '%s' window", processTitle)
 }
 
+func CloseWindow() {
+	hWnd, err := FindWindow("", processTitle)
+	if err != nil {
+		Logger.Fatal(err)
+	}
+	if err = PostMessage(hWnd, WM_CLOSE, 0, 0); err != nil {
+		Logger.Fatal(err)
+	}
+}
+
+func GameFailed() bool {
+	_, err := FindWindow("", failedTitle)
+	if err != nil {
+		return false
+	}
+	return true
+}
+
+// 新游戏
+func AgainGame() {
+	var keyP uint16 = 80
+	if _, err := UniKeyPress(keyP); err != nil {
+		panic(err)
+	}
+}
+
+// 重新开始
+func RestartGame() {
+	var keyR uint16 = 82
+	if _, err := UniKeyPress(keyR); err != nil {
+		panic(err)
+	}
+}
+
+// 退出游戏
+func ExitGame() {
+	var keyX uint16 = 88
+	if _, err := UniKeyPress(keyX); err != nil {
+		panic(err)
+	}
+}
+
+func CloseMessageBox() {
+	hWnd, err := FindWindow("", processTitle)
+	if err != nil {
+		Logger.Fatal(err)
+	}
+	if err = PostMessage(hWnd, MB_OK, 0, 0); err != nil {
+		Logger.Fatal(err)
+	}
+}
+
 func MoveMouse(row, col int) {
 	x, y := RowCol2XY(row, col)
 	if err := SetCursorPos(x, y); err != nil {
-		panic(err)
+		Logger.Fatal(err)
 	}
 	time.Sleep(clickInterval)
 }
@@ -49,7 +101,7 @@ func RowCol2XY(row, col int) (x int32, y int32) {
 func click(buttonType int, row, col int) {
 	x, y := RowCol2XY(row, col)
 	if _, err := MouseClick(buttonType, x, y); err != nil {
-		panic(err)
+		Logger.Fatal(err)
 	}
 	time.Sleep(clickInterval)
 }
@@ -57,7 +109,7 @@ func click(buttonType int, row, col int) {
 func doubleClick(buttonType int, row, col int) {
 	x, y := RowCol2XY(row, col)
 	if _, err := MouseDoubleClick(buttonType, x, y); err != nil {
-		panic(err)
+		Logger.Fatal(err)
 	}
 	time.Sleep(clickInterval)
 }

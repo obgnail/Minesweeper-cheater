@@ -15,6 +15,7 @@ var (
 
 	procSetCursorPos = user32.MustFindProc("SetCursorPos")
 	procSendInput    = user32.MustFindProc("SendInput")
+	procPostMessage  = user32.MustFindProc("PostMessageW")
 )
 
 func handlerErrNo(r1, r2 uintptr, errNo syscall.Errno) (err error) {
@@ -66,6 +67,27 @@ func SetWindowPos(hWnd syscall.Handle, x, y, cx, cy int32) (err error) {
 
 func SetForegroundWindow(hWnd syscall.Handle) (err error) {
 	r1, r2, errNo := syscall.Syscall(procSetForegroundWindow.Addr(), 1, uintptr(hWnd), 0, 0)
+	err = handlerErrNo(r1, r2, errNo)
+	return
+}
+
+const (
+	WM_CLOSE = 16
+)
+
+const (
+	MB_OK = 0x00000000
+)
+
+func PostMessage(hWnd syscall.Handle, msg uint32, wParam, lParam uintptr) (err error) {
+	r1, r2, errNo := syscall.Syscall6(procPostMessage.Addr(), 4,
+		uintptr(hWnd),
+		uintptr(msg),
+		wParam,
+		lParam,
+		0,
+		0)
+
 	err = handlerErrNo(r1, r2, errNo)
 	return
 }
