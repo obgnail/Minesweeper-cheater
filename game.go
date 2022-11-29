@@ -44,8 +44,21 @@ const (
 	CellTypeDone CellType = 10 // 标记已处理,避免重复处理
 )
 
-func Play() {
-	HandlePopup()
+func MineSweeper() {
+	InitLogger()
+	InitCache()
+	InitConfig()
+	InitStore()
+	for {
+		InitWindow()
+		InitTable()
+		success := Play()
+		When(success)
+	}
+}
+
+func Play() (success bool) {
+	HandlePopup(AgainGame)
 	for !Done() {
 		RenewTable()
 		// 正常来说只要将FindEqual和FindAlways放在一个循环上就行了。
@@ -55,39 +68,84 @@ func Play() {
 		Range(false, f1)
 		Range(true, f1)
 		Range(false, f2)
-		if !progress {
-			RandomPick() // 没有进展时随机选择
-			checkFail()  // 检查是否踩雷
+
+		if failed := PickAndCheck(); failed {
+			return false
 		}
-		progress = false
 	}
 	Logger.Info("--- DONE ---")
+	return true
 }
 
-// 效果等同于Play,不过效率不佳
-func Play2() {
-	HandlePopup()
-	for !Done() {
-		RenewTable()
-		Range(false, FindEqual)
-		Range(false, FindAlways)
-		if !progress {
-			RandomPick()
-			checkFail()
+// 没有进展时随机选择
+func PickAndCheck() (failed bool) {
+	if !progress {
+		if err := RandomPick(); err != nil {
+			return true
 		}
-		progress = false
+		failed = checkFail() // 检查是否踩雷
+		if failed {
+			Logger.Info("--- FAILED, I am sorry ---")
+			return true
+		}
 	}
+	progress = false
+	return false
 }
 
-func checkFail() {
+func WhenSuccess() {
 	doubleClick(LeftButton, rowNum, colNum)
 	time.Sleep(500 * time.Millisecond)
-	failed := GameFailed()
-	if failed {
-		Logger.Info("--- FAILED, I am sorry ---")
-		AgainGame()
+
+	switch whenSuccess {
+	case "stop":
+		os.Exit(1)
+	case "again":
+		HandlePopup(AgainGame)
+	case "exit":
+		HandlePopup(ExitGame)
+		os.Exit(1)
+	default:
 		os.Exit(1)
 	}
+}
+
+func WhenFailed() {
+	doubleClick(LeftButton, rowNum, colNum)
+	time.Sleep(500 * time.Millisecond)
+
+	switch whenFailed {
+	case "stop":
+		os.Exit(1)
+	case "restart":
+		HandlePopup(func() {
+			RestartGame()
+			doubleClick(LeftButton, rowNum, colNum) // 去除那该死的【重玩】提示框
+		})
+	case "again":
+		HandlePopup(AgainGame)
+	case "exit":
+		HandlePopup(ExitGame)
+		os.Exit(1)
+	default:
+		os.Exit(1)
+	}
+}
+
+func When(success bool) {
+	if success {
+		WhenSuccess()
+		return
+	}
+	WhenFailed()
+}
+
+func checkFail() bool {
+	time.Sleep(100 * time.Millisecond)
+	doubleClick(LeftButton, rowNum, colNum)
+	time.Sleep(600 * time.Millisecond)
+	failed := GameFailed()
+	return failed
 }
 
 func Done() bool {
@@ -131,12 +189,10 @@ func FindEqual(row, col int) {
 		SetFinish(row, col)
 	case flagNum:
 		if unknownNum != 0 {
-			//Logger.Debug("Strategy1(ClearCell):")
 			ClearCell(row, col, neighbors[CellTypeUnknown])
 		}
 		SetFinish(row, col)
 	case unknownNum + flagNum:
-		//Logger.Debug("Strategy2(MineFlag):")
 		for _, cell := range neighbors[CellTypeUnknown] {
 			FlagMine(cell.row, cell.col)
 		}
@@ -145,7 +201,7 @@ func FindEqual(row, col int) {
 }
 
 // 策略7
-func RandomPick() {
+func RandomPick() (err error) {
 	var pickTable []*Location
 	Range(false, func(row, col int) {
 		if GetCellType(row, col) == CellTypeUnknown {
@@ -154,10 +210,13 @@ func RandomPick() {
 	})
 
 	rand.Seed(time.Now().Unix())
+	if len(pickTable) == 0 {
+		return fmt.Errorf("len(pickTable) == 0")
+	}
 	idx := rand.Intn(len(pickTable))
 	c := pickTable[idx]
-	//Logger.Debug("Strategy5(RandomPick):")
 	randomPick(c.row, c.col)
+	return
 }
 
 // 策略3-6：找出在所有情况中，总是雷 or 总是安全 的单元格
@@ -166,7 +225,7 @@ func FindAlways(row, col int) {
 	unfinishedNumberNeighbors := GetUnfinishedNumberNeighbors(row, col)
 	passSituations := getAllPassSituations(row, col, unfinishedNumberNeighbors)
 
-	switch l := len(passSituations); l {
+	switch len(passSituations) {
 	case 0:
 		return
 	case 1:
@@ -265,10 +324,8 @@ func handleAlwaysCell(cells []*Cell) {
 	for _, cell := range cells {
 		switch cell.CellType {
 		case CellTypeSafe:
-			//Logger.Debug("Strategy3(FlagSafe):")
 			FlagSafe(cell.row, cell.col)
 		case CellTypeMine:
-			//Logger.Debug("Strategy4(FlagMine):")
 			FlagMine(cell.row, cell.col)
 		}
 	}
@@ -641,16 +698,15 @@ func updateTable() {
 
 func InitTable() {
 	for row := 0; row != rowNum; row++ {
+
 		table[row] = [colNum]CellType{}
+		finish[row] = [colNum]bool{}
+		flag[row] = [colNum]bool{}
+
 		for col := 0; col != colNum; col++ {
 			table[row][col] = 0
-		}
-	}
-
-	for row := 0; row != rowNum; row++ {
-		finish[row] = [colNum]bool{}
-		for col := 0; col != colNum; col++ {
 			finish[row][col] = false
+			flag[row][col] = false
 		}
 	}
 }

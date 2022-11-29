@@ -62,10 +62,10 @@ func GameSuccess() bool {
 }
 
 // 处理弹窗
-func HandlePopup() {
+func HandlePopup(f func()) {
 	if GameFailed() || GameSuccess() {
-		AgainGame()
-		time.Sleep(1300 * time.Millisecond)
+		f()
+		time.Sleep(2 * time.Second)
 	}
 }
 
