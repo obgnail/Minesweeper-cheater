@@ -100,7 +100,7 @@ func TestFunc3(t *testing.T) {
 
 func TestFunc4(t *testing.T) {
 	//CloseWindow()
-	CloseMessageBox()
+	CloseMineSweeper()
 }
 
 func TestFunc5(t *testing.T) {
@@ -122,12 +122,17 @@ func TestCombination(t *testing.T) {
 	t.Log(res)
 
 	InitCache()
-	res3 := CombinationWithCache(8, 8)
+	res3 := GetCombinationFromCache(8, 8)
 	t.Log(res3)
 
 	for i := 1; i != 9; i++ {
 		for j := 1; j != i+1; j++ {
-			t.Log(i, j, CombinationWithCache(i, j))
+			t.Log(i, j, GetCombinationFromCache(i, j))
 		}
 	}
+}
+
+func TestPopup(t *testing.T) {
+	success := GameSuccess()
+	t.Log(success)
 }

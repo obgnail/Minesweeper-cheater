@@ -33,7 +33,7 @@ const maxCellNum = 9
 
 var combinationResults [maxCellNum][maxCellNum][][]int
 
-func CombinationWithCache(n int, m int) [][]int {
+func GetCombinationFromCache(n int, m int) [][]int {
 	if m < 1 || m > n {
 		return [][]int{}
 	}

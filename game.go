@@ -45,6 +45,7 @@ const (
 )
 
 func Play() {
+	HandlePopup()
 	for !Done() {
 		RenewTable()
 		// 正常来说只要将FindEqual和FindAlways放在一个循环上就行了。
@@ -65,6 +66,7 @@ func Play() {
 
 // 效果等同于Play,不过效率不佳
 func Play2() {
+	HandlePopup()
 	for !Done() {
 		RenewTable()
 		Range(false, FindEqual)
@@ -472,9 +474,9 @@ func getSituationList(row, col int) []*Situation {
 		}
 	}
 
-	unknownRemain := len(unknown)                                 // 剩余未知的数量
-	mineRemain := int(GetCellType(row, col)) - dugCell            // 剩余的雷数量
-	situations := CombinationWithCache(unknownRemain, mineRemain) // 总共有这么多种情况
+	unknownRemain := len(unknown)                                    // 剩余未知的数量
+	mineRemain := int(GetCellType(row, col)) - dugCell               // 剩余的雷数量
+	situations := GetCombinationFromCache(unknownRemain, mineRemain) // 总共有这么多种情况
 
 	var res []*Situation
 	for _, situation := range situations {

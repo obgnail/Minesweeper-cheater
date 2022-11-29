@@ -1,6 +1,7 @@
 package main
 
 import (
+	"syscall"
 	"time"
 )
 
@@ -43,15 +44,57 @@ func CloseWindow() {
 }
 
 func GameFailed() bool {
-	_, err := FindWindow("", failedTitle)
+	hWnd, err := FindWindow("", failedTitle)
 	if err != nil {
 		return false
 	}
+	Logger.Debugf("Found '%s' window: handle=0x%x", failedTitle, hWnd)
 	return true
+}
+
+func GameSuccess() bool {
+	hWnd, err := FindWindow("", successTitle)
+	if err != nil {
+		return false
+	}
+	Logger.Debugf("Found '%s' window: handle=0x%x", successTitle, hWnd)
+	return true
+}
+
+// 处理弹窗
+func HandlePopup() {
+	if GameFailed() || GameSuccess() {
+		AgainGame()
+		time.Sleep(2 * time.Second)
+	}
+}
+
+func FindBox() (hWnd syscall.Handle, err error) {
+	hWnd, err = FindWindow("", failedTitle)
+	if err == nil {
+		return
+	}
+	hWnd, err = FindWindow("", successTitle)
+	if err == nil {
+		return
+	}
+	return
+}
+
+func ForegroundBox() {
+	hWnd, err := FindBox()
+	if err != nil {
+		return
+	}
+	if err = SetForegroundWindow(hWnd); err != nil {
+		Logger.Fatal(err)
+	}
 }
 
 // 新游戏
 func AgainGame() {
+	ForegroundBox()
+	Logger.Debugf("Again Game...")
 	var keyP uint16 = 80
 	if _, err := UniKeyPress(keyP); err != nil {
 		panic(err)
@@ -60,6 +103,8 @@ func AgainGame() {
 
 // 重新开始
 func RestartGame() {
+	ForegroundBox()
+	Logger.Debugf("Restart Game...")
 	var keyR uint16 = 82
 	if _, err := UniKeyPress(keyR); err != nil {
 		panic(err)
@@ -68,13 +113,16 @@ func RestartGame() {
 
 // 退出游戏
 func ExitGame() {
+	ForegroundBox()
+	Logger.Debugf("Exit Game...")
 	var keyX uint16 = 88
 	if _, err := UniKeyPress(keyX); err != nil {
 		panic(err)
 	}
 }
 
-func CloseMessageBox() {
+func CloseMineSweeper() {
+	Logger.Debugf("Close MineSweeper...")
 	hWnd, err := FindWindow("", processTitle)
 	if err != nil {
 		Logger.Fatal(err)
