@@ -116,9 +116,7 @@ func RenewTable() {
 	MoveMouse(rowNum, colNum) // 将鼠标移动到范围外，防止错误解析图片
 	//table = Window2Table(nil)
 	table = Window2Table(IsFinish)
-	if !showFlag {
-		updateTable()
-	}
+	updateTable()
 }
 
 // 策略1-2: 数值=雷数 or 数值=未知单元格数+雷数
@@ -575,7 +573,7 @@ func IsNumberCellType(cellType CellType) bool {
 func ClearCell(row, col int, unknownCell []*Cell) {
 	progress = true
 	// 只有标记了flag的情况下才可以使用双击,否则需要一个个去点
-	if showFlag {
+	if useDoubleClick {
 		Logger.Debugf("DoubleClick: (%d,%d)", row, col)
 		doubleClick(LeftButton, row, col)
 		for _, cell := range unknownCell {

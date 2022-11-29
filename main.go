@@ -3,7 +3,7 @@ package main
 func main() {
 	InitLogger()
 	InitCache()
-	InitFlag()
+	InitConfig()
 	InitWindow()
 	InitTable()
 	InitStore()

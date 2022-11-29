@@ -65,7 +65,7 @@ func GameSuccess() bool {
 func HandlePopup() {
 	if GameFailed() || GameSuccess() {
 		AgainGame()
-		time.Sleep(2 * time.Second)
+		time.Sleep(1300 * time.Millisecond)
 	}
 }
 

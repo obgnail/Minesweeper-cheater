@@ -73,7 +73,7 @@ func InitTestTable3() {
 
 func TestFunc(t *testing.T) {
 	InitLogger()
-	InitFlag()
+	InitConfig()
 	InitTable()
 	InitTestTable()
 	Range(false, FindAlways)
@@ -82,7 +82,7 @@ func TestFunc(t *testing.T) {
 
 func TestFunc2(t *testing.T) {
 	InitLogger()
-	InitFlag()
+	InitConfig()
 	InitTable()
 	InitTestTable2()
 	Range(false, FindAlways)
@@ -91,7 +91,7 @@ func TestFunc2(t *testing.T) {
 
 func TestFunc3(t *testing.T) {
 	InitLogger()
-	InitFlag()
+	InitConfig()
 	InitTable()
 	InitTestTable3()
 	Range(false, FindAlways)

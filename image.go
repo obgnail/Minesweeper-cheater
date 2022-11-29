@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"time"
 )
 
 const (
@@ -48,13 +49,21 @@ var matchMap = map[string]CellType{
 	"unknown-4.jpg": CellTypeUnknown,
 }
 
-func InitFlag() {
-	if showFlag {
-		matchMap["flag-1.jpg"] = CellTypeFlag
-		matchMap["flag-2.jpg"] = CellTypeFlag
-		matchMap["flag-3.jpg"] = CellTypeFlag
-		matchMap["flag-4.jpg"] = CellTypeFlag
+func InitConfig() {
+	if !showFlag || clickInterval < 200*time.Microsecond {
+		useDoubleClick = false
 	}
+
+	if clickInterval < 100*time.Millisecond {
+		clickInterval = 100 * time.Millisecond
+	}
+
+	//if showFlag {
+	//	matchMap["flag-1.jpg"] = CellTypeFlag
+	//	matchMap["flag-2.jpg"] = CellTypeFlag
+	//	matchMap["flag-3.jpg"] = CellTypeFlag
+	//	matchMap["flag-4.jpg"] = CellTypeFlag
+	//}
 }
 
 func InitStore() {
