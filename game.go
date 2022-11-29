@@ -79,7 +79,7 @@ func Play2() {
 
 func checkFail() {
 	doubleClick(LeftButton, rowNum, colNum)
-	doubleClick(LeftButton, rowNum, colNum) // 两次双击,给足够的时间让弹窗展示出来
+	time.Sleep(500 * time.Millisecond)
 	failed := GameFailed()
 	if failed {
 		Logger.Info("--- FAILED, I am sorry ---")
@@ -472,9 +472,9 @@ func getSituationList(row, col int) []*Situation {
 		}
 	}
 
-	unknownRemain := len(unknown)                        // 剩余未知的数量
-	mineRemain := int(GetCellType(row, col)) - dugCell   // 剩余的雷数量
-	situations := Combination(unknownRemain, mineRemain) // 总共有这么多种情况
+	unknownRemain := len(unknown)                                 // 剩余未知的数量
+	mineRemain := int(GetCellType(row, col)) - dugCell            // 剩余的雷数量
+	situations := CombinationWithCache(unknownRemain, mineRemain) // 总共有这么多种情况
 
 	var res []*Situation
 	for _, situation := range situations {

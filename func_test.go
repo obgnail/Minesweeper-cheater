@@ -116,3 +116,18 @@ func TestFunc6(t *testing.T) {
 		panic(err)
 	}
 }
+
+func TestCombination(t *testing.T) {
+	res := Combination(8, 8)
+	t.Log(res)
+
+	InitCache()
+	res3 := CombinationWithCache(8, 8)
+	t.Log(res3)
+
+	for i := 1; i != 9; i++ {
+		for j := 1; j != i+1; j++ {
+			t.Log(i, j, CombinationWithCache(i, j))
+		}
+	}
+}

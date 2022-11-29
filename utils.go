@@ -29,6 +29,25 @@ func Abs(x int) int {
 	return x
 }
 
+const maxCellNum = 9
+
+var combinationResults [maxCellNum][maxCellNum][][]int
+
+func CombinationWithCache(n int, m int) [][]int {
+	if m < 1 || m > n {
+		return [][]int{}
+	}
+	return combinationResults[n][m]
+}
+
+func InitCache() {
+	for i := 1; i != maxCellNum; i++ {
+		for j := 1; j != i+1; j++ {
+			combinationResults[i][j] = Combination(i, j)
+		}
+	}
+}
+
 //组合算法(从n中取出m个数)
 func Combination(n int, m int) [][]int {
 	if m < 1 || m > n {
