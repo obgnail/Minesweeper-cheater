@@ -18,9 +18,9 @@ var (
 	// 若 !showFlag || clickInterval<200ms 此设置自动调整为false;
 	useDoubleClick = false
 	// 是否插棋
-	showFlag = true
+	showFlag = false
 	// 当失败时: restart/again/stop/exit
 	whenFailed = "again"
 	// 当成功时: again/stop/exit
-	whenSuccess = "stop"
+	whenSuccess = "again"
 )

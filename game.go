@@ -51,7 +51,7 @@ func MineSweeper() {
 	InitStore()
 	for {
 		InitWindow()
-		InitTable()
+		InitVar()
 		success := Play()
 		When(success)
 	}
@@ -696,7 +696,10 @@ func updateTable() {
 	})
 }
 
-func InitTable() {
+func InitVar() {
+	progress   = false
+	remainMine = 99
+
 	for row := 0; row != rowNum; row++ {
 
 		table[row] = [colNum]CellType{}
