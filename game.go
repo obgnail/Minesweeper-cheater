@@ -77,14 +77,14 @@ func Play() (success bool) {
 	return true
 }
 
-func Play2() (success bool) {
+func PlayTest() (success bool) {
 	HandlePopup(AgainGame)
 	for !Done() {
 		RenewTable()
+		//Range(true,FindEqual)
 		Range(false, FindAlways)
-		panic(11)
+		panic(1)
 	}
-	Logger.Info("--- DONE ---")
 	return true
 }
 
@@ -243,22 +243,18 @@ func FindAlways(row, col int) {
 		// 如果只有一种情况,说明所有单元格总是正确
 		handleAlwaysCell(passSituations[0].cells)
 	default:
-		alwaysCells := alwaysCellsInPassSituations(passSituations)
-		handleAlwaysCell(alwaysCells)
-
 		// 如果多于一种情况,那么就要找出 总是雷 或 总是安全 的单元格
-		for _, tryCell := range unfinishedNumberNeighbors {
-			okCount, safeCountMap, mineCountMap := getCountMapByPassSituations(tryCell, passSituations)
-			safe := _getAlwaysCell(safeCountMap, okCount)
-			mine := _getAlwaysCell(mineCountMap, okCount)
-			handleAlwaysCell(safe)
-			handleAlwaysCell(mine)
-		}
+		var alwaysCells []*Cell
+		inMyView := alwaysCellsInMyView(passSituations)
+		inNeighborsView := alwaysCellsInNeighborsView(passSituations, unfinishedNumberNeighbors)
+		alwaysCells = append(alwaysCells, inMyView...)
+		alwaysCells = append(alwaysCells, inNeighborsView...)
+		handleAlwaysCell(alwaysCells)
 	}
 }
 
-// 在所有策略中,某一位置的单元格 总是雷 或 总是安全的
-func alwaysCellsInPassSituations(passSituations []*Situation) (alwaysCells []*Cell) {
+// 在当前单元格看来,某一位置的单元格 总是雷 或 总是安全的
+func alwaysCellsInMyView(passSituations []*Situation) (alwaysCells []*Cell) {
 	if len(passSituations) == 0 {
 		return nil
 	}
@@ -279,6 +275,18 @@ func alwaysCellsInPassSituations(passSituations []*Situation) (alwaysCells []*Ce
 		if alwaysEqual {
 			alwaysCells = append(alwaysCells, passSituations[0].cells[i])
 		}
+	}
+	return
+}
+
+// 在所有邻居看来,某一位置的单元格 总是雷 或 总是安全的
+func alwaysCellsInNeighborsView(passSituations []*Situation, unfinishedNumberNeighbors []*Cell) (alwaysCells []*Cell) {
+	for _, tryCell := range unfinishedNumberNeighbors {
+		okCount, safeCountMap, mineCountMap := getCountMapByPassSituations(tryCell, passSituations)
+		safe := _getAlwaysCell(safeCountMap, okCount)
+		mine := _getAlwaysCell(mineCountMap, okCount)
+		alwaysCells = append(alwaysCells, safe...)
+		alwaysCells = append(alwaysCells, mine...)
 	}
 	return
 }
@@ -704,7 +712,7 @@ func FlagSafe(row, col int) {
 }
 
 func FlagMine(row, col int) {
-	if GetCellType(row, col) == CellTypeDone {
+	if ct := GetCellType(row, col); ct == CellTypeDone || ct == CellTypeFlag {
 		return
 	}
 	progress = true
