@@ -66,7 +66,7 @@ func Play() (success bool) {
 
 		RenewTable()
 		// 正常来说只要将FindEqual和FindAlways放在一个循环上就行了。
-		// 分四次迭代后，场上能排出更多的flag,提高效率
+		// 分三次迭代后，一次循环场上能排出更多的flag,提高效率
 		f1 := ignoreZeroCellDeco(FindEqual)
 		f2 := ignoreZeroCellDeco(FindAlways)
 		Range(false, f1)
@@ -155,8 +155,8 @@ func Done() bool {
 			unknown++
 		}
 	})
-	if remainMine == unknown {
-		return true
+	if remainMine != unknown {
+		return false
 	}
 
 	for row := 0; row != rowNum; row++ {
@@ -171,7 +171,6 @@ func Done() bool {
 
 func RenewTable() {
 	MoveMouse(rowNum, colNum) // 将鼠标移动到范围外，防止错误解析图片
-	//table = Window2Table(nil)
 	table = Window2Table(IsFinish)
 	updateTable()
 }
@@ -179,19 +178,18 @@ func RenewTable() {
 // 策略1-2: 数值=雷数 or 数值=未知单元格数+雷数
 func FindEqual(row, col int) {
 	neighbors := GetNeighborMap(row, col)
-	unknownNum := len(neighbors[CellTypeUnknown])
-	flagNum := len(neighbors[CellTypeFlag])
-	value := int(GetCellType(row, col))
+	_unknown := len(neighbors[CellTypeUnknown])
+	_flag := len(neighbors[CellTypeFlag])
 
-	switch value {
+	switch int(GetCellType(row, col)) {
 	case int(CellTypeZero):
 		SetFinish(row, col)
-	case flagNum:
-		if unknownNum != 0 {
+	case _flag:
+		if _unknown != 0 {
 			ClearCell(row, col, neighbors[CellTypeUnknown])
 		}
 		SetFinish(row, col)
-	case unknownNum + flagNum:
+	case _unknown + _flag:
 		for _, cell := range neighbors[CellTypeUnknown] {
 			FlagMine(cell.row, cell.col)
 		}
@@ -265,6 +263,7 @@ func FindAlways(row, col int) {
 		inNeighborsView := alwaysCellsInNeighborsView(passSituations, unfinishedNumberNeighbors)
 		alwaysCells = append(alwaysCells, inMyView...)
 		alwaysCells = append(alwaysCells, inNeighborsView...)
+		alwaysCells = unique(alwaysCells)
 		handleAlwaysCell(alwaysCells)
 	}
 }
@@ -275,8 +274,7 @@ func alwaysCellsInMyView(passSituations []*Situation) (alwaysCells []*Cell) {
 		return nil
 	}
 
-	cellNums := len(passSituations[0].cells)
-	for i := 0; i != cellNums; i++ {
+	for i := 0; i != len(passSituations[0].cells); i++ {
 		alwaysEqual := true
 		cellType0 := passSituations[0].cells[i].CellType
 
@@ -309,14 +307,13 @@ func alwaysCellsInNeighborsView(passSituations []*Situation, unfinishedNumberNei
 
 // 如果单元格是雷的次数不等于情况数，说明该单元格在所有情况中不总是雷
 // 同理，如果单元格安全的次数不等于情况数，说明该单元格在所有情况中不总是安全的
-func _getAlwaysCell(MapCellToCount map[*Cell]int, passSituationLength int) []*Cell {
-	var res []*Cell
+func _getAlwaysCell(MapCellToCount map[*Cell]int, passSituationLength int) (alwaysCells []*Cell) {
 	for cell, count := range MapCellToCount {
 		if count == passSituationLength {
-			res = append(res, cell)
+			alwaysCells = append(alwaysCells, cell)
 		}
 	}
-	return res
+	return
 }
 
 // 策略3-6最重要的函数
@@ -350,9 +347,9 @@ func getCountMapByPassSituations(tryCell *Cell, passSituations []*Situation) (in
 	return okCount, safe, mine
 }
 
-func _toCell(m map[string]int, cellType CellType) map[*Cell]int {
+func _toCell(countMap map[string]int, cellType CellType) map[*Cell]int {
 	res := make(map[*Cell]int)
-	for cell, count := range m {
+	for cell, count := range countMap {
 		s := strings.Split(cell, "-")
 		r, _ := strconv.Atoi(s[0])
 		c, _ := strconv.Atoi(s[1])
@@ -366,10 +363,8 @@ func _toCell(m map[string]int, cellType CellType) map[*Cell]int {
 }
 
 // 通过(row,col)的邻居、二级邻居筛掉不可能成立的情况，返回所有可能成立的情况
-func getAllPassSituations(row, col int, unfinishedNumberNeighbors []*Cell) []*Situation {
+func getAllPassSituations(row, col int, unfinishedNumberNeighbors []*Cell) (passSituations []*Situation) {
 	allSituation := getSituationList(row, col)
-
-	var passSituations []*Situation
 	for _, situation := range allSituation {
 		thisSituationAlwaysPass := true // 此策略对所有人都能成功
 		for _, tryCell := range unfinishedNumberNeighbors {
@@ -459,17 +454,20 @@ func resolveSituation(cell *Cell, situation *Situation) (unique bool, safe []*Ce
 	return true, safe, mine
 }
 
-func Range(reverse bool, f func(row, col int)) {
+func Range(reverse bool, rangeFunc func(row, col int)) {
+	if rangeFunc == nil {
+		panic("rangeFunc must not nil")
+	}
 	if !reverse {
 		for row := 0; row != rowNum; row++ {
 			for col := 0; col != colNum; col++ {
-				f(row, col)
+				rangeFunc(row, col)
 			}
 		}
 	} else {
 		for col := colNum - 1; col != -1; col-- {
 			for row := rowNum - 1; row != -1; row-- {
-				f(row, col)
+				rangeFunc(row, col)
 			}
 		}
 	}
@@ -561,21 +559,21 @@ func (s *Situation) RangeCell(rangeFunc func(idx int, cell *Cell) (stop bool)) {
 }
 
 func (s *Situation) String() string {
-	var isMine []string
-	var notMine []string
+	var mine []string
+	var safe []string
 	for _, cell := range s.cells {
 		str := fmt.Sprintf("(%d,%d)", cell.row, cell.col)
 		if cell.CellType == CellTypeMine {
-			isMine = append(isMine, str)
+			mine = append(mine, str)
 		} else if cell.CellType == CellTypeSafe {
-			notMine = append(notMine, str)
+			safe = append(safe, str)
 		}
 	}
-	str := "Mine:"
-	str += strings.Join(isMine, ", ")
-	str += " | Safe:"
-	str += strings.Join(notMine, ", ")
-	return str
+	return fmt.Sprintf(
+		"Mine: %s | Safe: %s",
+		strings.Join(mine, ", "),
+		strings.Join(safe, ", "),
+	)
 }
 
 // 对于(row, col)来说,雷的所有可能分布情况
@@ -584,19 +582,19 @@ func getSituationList(row, col int) []*Situation {
 		{row - 1, col - 1}, {row - 1, col}, {row - 1, col + 1}, {row, col + 1},
 		{row + 1, col + 1}, {row + 1, col}, {row + 1, col - 1}, {row, col - 1},
 	}
-	dugCell := 0            // 已探明雷的数量
-	var unknown []*Location // 可能是雷的位置
+	_mine := 0               // 已探明雷的数量
+	var _unknown []*Location // 可能是雷的位置
 	for _, loc := range searchLocation {
 		switch GetCellType(loc[0], loc[1]) {
 		case CellTypeFlag:
-			dugCell++
+			_mine++
 		case CellTypeUnknown:
-			unknown = append(unknown, &Location{loc[0], loc[1]})
+			_unknown = append(_unknown, &Location{loc[0], loc[1]})
 		}
 	}
 
-	unknownRemain := len(unknown)                                    // 剩余未知的数量
-	mineRemain := int(GetCellType(row, col)) - dugCell               // 剩余的雷数量
+	unknownRemain := len(_unknown)                                   // 剩余未知的数量
+	mineRemain := int(GetCellType(row, col)) - _mine                 // 剩余的雷数量
 	situations := GetCombinationFromCache(unknownRemain, mineRemain) // 总共有这么多种情况
 
 	var res []*Situation
@@ -611,7 +609,7 @@ func getSituationList(row, col int) []*Situation {
 			}
 			cells = append(cells, &Cell{
 				CellType: ct,
-				Location: unknown[idx],
+				Location: _unknown[idx],
 			})
 		}
 		res = append(res, &Situation{cells: cells})
@@ -768,9 +766,7 @@ func updateTable() {
 func InitVar() {
 	progress = false
 	remainMine = 99
-
 	for row := 0; row != rowNum; row++ {
-
 		table[row] = [colNum]CellType{}
 		finish[row] = [colNum]bool{}
 		flag[row] = [colNum]bool{}
