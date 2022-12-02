@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"github.com/sirupsen/logrus"
+	"math/rand"
 	"os"
 )
 
@@ -133,4 +135,27 @@ func moveOneToLeft(leftNums []int) {
 			leftNums[i] = 0
 		}
 	}
+}
+
+type WeightRandomBalance struct {
+	list     []interface{}
+	curIndex int
+}
+
+func (w *WeightRandomBalance) Add(cell interface{}, weight int) error {
+	if weight <= 0 {
+		return fmt.Errorf("weight must gt 0")
+	}
+	for i := 0; i < weight; i++ {
+		w.list = append(w.list, cell)
+	}
+	return nil
+}
+
+func (w *WeightRandomBalance) Next() interface{} {
+	if len(w.list) <= 0 {
+		return nil
+	}
+	w.curIndex = rand.Intn(len(w.list))
+	return w.list[w.curIndex]
 }

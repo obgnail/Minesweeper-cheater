@@ -60,6 +60,10 @@ func MineSweeper() {
 func Play() (success bool) {
 	HandlePopup(AgainGame)
 	for !Done() {
+		if failed := PickAndCheck(); failed {
+			return false
+		}
+
 		RenewTable()
 		// 正常来说只要将FindEqual和FindAlways放在一个循环上就行了。
 		// 分四次迭代后，场上能排出更多的flag,提高效率
@@ -68,23 +72,8 @@ func Play() (success bool) {
 		Range(false, f1)
 		Range(true, f1)
 		Range(false, f2)
-
-		if failed := PickAndCheck(); failed {
-			return false
-		}
 	}
 	Logger.Info("--- DONE ---")
-	return true
-}
-
-func PlayTest() (success bool) {
-	HandlePopup(AgainGame)
-	for !Done() {
-		RenewTable()
-		//Range(true,FindEqual)
-		Range(false, FindAlways)
-		panic(1)
-	}
 	return true
 }
 
@@ -94,8 +83,7 @@ func PickAndCheck() (failed bool) {
 		if err := RandomPick(); err != nil {
 			return true
 		}
-		failed = checkFail() // 检查是否踩雷
-		if failed {
+		if failed = checkFail(); failed { // 检查是否踩雷
 			Logger.Info("--- FAILED, I am sorry ---")
 			return true
 		}
@@ -220,14 +208,42 @@ func RandomPick() (err error) {
 		}
 	})
 
-	rand.Seed(time.Now().Unix())
 	if len(pickTable) == 0 {
 		return fmt.Errorf("len(pickTable) == 0")
 	}
+
+	var row, col int
+	switch guessStrategy {
+	case "random":
+		row, col = _random(pickTable)
+	case "edge":
+		row, col = _edge(pickTable)
+	}
+
+	randomPick(row, col)
+	return
+}
+
+func _random(pickTable []*Location) (row, col int) {
+	rand.Seed(time.Now().Unix())
 	idx := rand.Intn(len(pickTable))
 	c := pickTable[idx]
-	randomPick(c.row, c.col)
-	return
+	return c.row, c.col
+}
+
+func _edge(pickTable []*Location) (row, col int) {
+	wrb := &WeightRandomBalance{}
+	for _, c := range pickTable {
+		neighbors := 0
+		GetNeighborsByFunc(c.row, c.col, func(idx int, cell *Cell) {
+			if IsNumberCellType(cell.CellType) {
+				neighbors++
+			}
+		})
+		_ = wrb.Add(&Location{row: c.row, col: c.col}, neighbors+1)
+	}
+	next := wrb.Next().(*Location)
+	return next.row, next.col
 }
 
 // 策略3-6：找出在所有情况中，总是雷 or 总是安全 的单元格
@@ -603,13 +619,16 @@ func getSituationList(row, col int) []*Situation {
 	return res
 }
 
-func GetNeighborsByFunc(row, col int, pickFunc func(idx int, cell *Cell)) {
+func GetNeighborsByFunc(row, col int, rangeFunc func(idx int, cell *Cell)) {
+	if rangeFunc == nil {
+		panic("rangeFunc must not nil")
+	}
 	searchLocation := [][2]int{
 		{row - 1, col - 1}, {row - 1, col}, {row - 1, col + 1}, {row, col + 1},
 		{row + 1, col + 1}, {row + 1, col}, {row + 1, col - 1}, {row, col - 1},
 	}
 	for idx, loc := range searchLocation {
-		pickFunc(idx, &Cell{
+		rangeFunc(idx, &Cell{
 			CellType: GetCellType(loc[0], loc[1]),
 			Location: &Location{loc[0], loc[1]},
 		})
@@ -757,7 +776,7 @@ func InitVar() {
 		flag[row] = [colNum]bool{}
 
 		for col := 0; col != colNum; col++ {
-			table[row][col] = 0
+			table[row][col] = CellTypeUnknown
 			finish[row][col] = false
 			flag[row][col] = false
 		}
