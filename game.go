@@ -77,6 +77,17 @@ func Play() (success bool) {
 	return true
 }
 
+func Play2() (success bool) {
+	HandlePopup(AgainGame)
+	for !Done() {
+		RenewTable()
+		Range(false, FindAlways)
+		panic(11)
+	}
+	Logger.Info("--- DONE ---")
+	return true
+}
+
 // 没有进展时随机选择
 func PickAndCheck() (failed bool) {
 	if !progress {
@@ -232,6 +243,9 @@ func FindAlways(row, col int) {
 		// 如果只有一种情况,说明所有单元格总是正确
 		handleAlwaysCell(passSituations[0].cells)
 	default:
+		alwaysCells := alwaysCellsInPassSituations(passSituations)
+		handleAlwaysCell(alwaysCells)
+
 		// 如果多于一种情况,那么就要找出 总是雷 或 总是安全 的单元格
 		for _, tryCell := range unfinishedNumberNeighbors {
 			okCount, safeCountMap, mineCountMap := getCountMapByPassSituations(tryCell, passSituations)
@@ -241,6 +255,32 @@ func FindAlways(row, col int) {
 			handleAlwaysCell(mine)
 		}
 	}
+}
+
+// 在所有策略中,某一位置的单元格 总是雷 或 总是安全的
+func alwaysCellsInPassSituations(passSituations []*Situation) (alwaysCells []*Cell) {
+	if len(passSituations) == 0 {
+		return nil
+	}
+
+	cellNums := len(passSituations[0].cells)
+	for i := 0; i != cellNums; i++ {
+		alwaysEqual := true
+		cellType0 := passSituations[0].cells[i].CellType
+
+		for j := 1; j != len(passSituations); j++ {
+			cellTypeN := passSituations[j].cells[i].CellType
+			alwaysEqual = alwaysEqual && (cellType0 == cellTypeN)
+			if !alwaysEqual {
+				break
+			}
+		}
+
+		if alwaysEqual {
+			alwaysCells = append(alwaysCells, passSituations[0].cells[i])
+		}
+	}
+	return
 }
 
 // 如果单元格是雷的次数不等于情况数，说明该单元格在所有情况中不总是雷
@@ -280,25 +320,25 @@ func getCountMapByPassSituations(tryCell *Cell, passSituations []*Situation) (in
 		}
 	}
 
-	toCell := func(m map[string]int, cellType CellType) map[*Cell]int {
-		res := make(map[*Cell]int)
-		for cell, count := range m {
-			s := strings.Split(cell, "-")
-			r, _ := strconv.Atoi(s[0])
-			c, _ := strconv.Atoi(s[1])
-			_cell := &Cell{
-				CellType: cellType,
-				Location: &Location{row: r, col: c},
-			}
-			res[_cell] = count
-		}
-		return res
-	}
-
-	safe := toCell(safeCountMap, CellTypeSafe)
-	mine := toCell(mineCountMap, CellTypeMine)
+	safe := _toCell(safeCountMap, CellTypeSafe)
+	mine := _toCell(mineCountMap, CellTypeMine)
 
 	return okCount, safe, mine
+}
+
+func _toCell(m map[string]int, cellType CellType) map[*Cell]int {
+	res := make(map[*Cell]int)
+	for cell, count := range m {
+		s := strings.Split(cell, "-")
+		r, _ := strconv.Atoi(s[0])
+		c, _ := strconv.Atoi(s[1])
+		_cell := &Cell{
+			CellType: cellType,
+			Location: &Location{row: r, col: c},
+		}
+		res[_cell] = count
+	}
+	return res
 }
 
 // 通过(row,col)的邻居、二级邻居筛掉不可能成立的情况，返回所有可能成立的情况
@@ -315,7 +355,9 @@ func getAllPassSituations(row, col int, unfinishedNumberNeighbors []*Cell) []*Si
 				break
 			}
 		}
-		passSituations = append(passSituations, situation)
+		if thisSituationAlwaysPass {
+			passSituations = append(passSituations, situation)
+		}
 	}
 	return passSituations
 }
@@ -697,7 +739,7 @@ func updateTable() {
 }
 
 func InitVar() {
-	progress   = false
+	progress = false
 	remainMine = 99
 
 	for row := 0; row != rowNum; row++ {

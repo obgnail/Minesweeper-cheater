@@ -58,12 +58,12 @@ func InitConfig() {
 		clickInterval = 100 * time.Millisecond
 	}
 
-	//if showFlag {
-	//	matchMap["flag-1.jpg"] = CellTypeFlag
-	//	matchMap["flag-2.jpg"] = CellTypeFlag
-	//	matchMap["flag-3.jpg"] = CellTypeFlag
-	//	matchMap["flag-4.jpg"] = CellTypeFlag
-	//}
+	if showFlag {
+		matchMap["flag-1.jpg"] = CellTypeFlag
+		matchMap["flag-2.jpg"] = CellTypeFlag
+		matchMap["flag-3.jpg"] = CellTypeFlag
+		matchMap["flag-4.jpg"] = CellTypeFlag
+	}
 }
 
 func InitStore() {
