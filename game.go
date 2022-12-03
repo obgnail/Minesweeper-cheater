@@ -23,7 +23,7 @@ var (
 	flag   [rowNum][colNum]bool // flag cells
 )
 
-type CellType int
+type CellType = int
 
 const (
 	CellTypeFlag    CellType = -2
@@ -38,10 +38,25 @@ const (
 	CellTypeSeven   CellType = 7
 
 	// 程序在策略3-6使用
-	CellTypeMine CellType = 8 // 猜测是雷
-	CellTypeSafe CellType = 9 // 猜测不是雷
-
+	CellTypeMine CellType = 8  // 猜测是雷
+	CellTypeSafe CellType = 9  // 猜测不是雷
 	CellTypeDone CellType = 10 // 标记已处理,避免重复处理
+)
+
+type Option = string
+
+const (
+	optionRestart Option = "restart"
+	optionAgain   Option = "again"
+	optionStop    Option = "stop"
+	optionExit    Option = "exit"
+)
+
+type strategy = string
+
+const (
+	strategyRandom strategy = "random"
+	strategyEdge   strategy = "edge"
 )
 
 func MineSweeper() {
@@ -84,7 +99,7 @@ func PickAndCheck() (failed bool) {
 			return true
 		}
 		if failed = checkFail(); failed { // 检查是否踩雷
-			Logger.Info("--- FAILED, I am sorry ---")
+			Logger.Info("--- FAILED ---")
 			return true
 		}
 	}
@@ -97,11 +112,11 @@ func WhenSuccess() {
 	time.Sleep(500 * time.Millisecond)
 
 	switch whenSuccess {
-	case "stop":
+	case optionStop:
 		os.Exit(1)
-	case "again":
+	case optionAgain:
 		HandlePopup(AgainGame)
-	case "exit":
+	case optionExit:
 		HandlePopup(ExitGame)
 		os.Exit(1)
 	default:
@@ -114,16 +129,16 @@ func WhenFailed() {
 	time.Sleep(500 * time.Millisecond)
 
 	switch whenFailed {
-	case "stop":
+	case optionStop:
 		os.Exit(1)
-	case "restart":
+	case optionRestart:
 		HandlePopup(func() {
 			RestartGame()
 			doubleClick(LeftButton, rowNum, colNum) // 去除那该死的【重玩】提示框
 		})
-	case "again":
+	case optionAgain:
 		HandlePopup(AgainGame)
-	case "exit":
+	case optionExit:
 		HandlePopup(ExitGame)
 		os.Exit(1)
 	default:
@@ -172,7 +187,7 @@ func Done() bool {
 func RenewTable() {
 	MoveMouse(rowNum, colNum) // 将鼠标移动到范围外，防止错误解析图片
 	table = Window2Table(IsFinish)
-	updateTable()
+	updateFlag()
 }
 
 // 策略1-2: 数值=雷数 or 数值=未知单元格数+雷数
@@ -181,8 +196,8 @@ func FindEqual(row, col int) {
 	_unknown := len(neighbors[CellTypeUnknown])
 	_flag := len(neighbors[CellTypeFlag])
 
-	switch int(GetCellType(row, col)) {
-	case int(CellTypeZero):
+	switch GetCellType(row, col) {
+	case CellTypeZero:
 		SetFinish(row, col)
 	case _flag:
 		if _unknown != 0 {
@@ -212,12 +227,11 @@ func RandomPick() (err error) {
 
 	var row, col int
 	switch guessStrategy {
-	case "random":
+	case strategyRandom:
 		row, col = _random(pickTable)
-	case "edge":
+	case strategyEdge:
 		row, col = _edge(pickTable)
 	}
-
 	randomPick(row, col)
 	return
 }
@@ -233,7 +247,7 @@ func _edge(pickTable []*Location) (row, col int) {
 	wrb := &WeightRandomBalance{}
 	for _, c := range pickTable {
 		neighbors := 0
-		GetNeighborsByFunc(c.row, c.col, func(idx int, cell *Cell) {
+		RangeNeighbors(c.row, c.col, func(idx int, cell *Cell) {
 			if IsNumberCellType(cell.CellType) {
 				neighbors++
 			}
@@ -254,10 +268,10 @@ func FindAlways(row, col int) {
 	case 0:
 		return
 	case 1:
-		// 如果只有一种情况,说明所有单元格总是正确
+		// 若只有一种情况,说明所有单元格一定是正确的
 		handleAlwaysCell(passSituations[0].cells)
 	default:
-		// 如果多于一种情况,那么就要找出 总是雷 或 总是安全 的单元格
+		// 若多于一种情况,那么就要找出[总是雷]或[总是安全]的单元格
 		var alwaysCells []*Cell
 		inMyView := alwaysCellsInMyView(passSituations)
 		inNeighborsView := alwaysCellsInNeighborsView(passSituations, unfinishedNumberNeighbors)
@@ -268,18 +282,18 @@ func FindAlways(row, col int) {
 	}
 }
 
-// 在当前单元格看来,某一位置的单元格 总是雷 或 总是安全的
+// 在当前单元格看来,某一位置的单元格[总是雷]或[总是安全]
 func alwaysCellsInMyView(passSituations []*Situation) (alwaysCells []*Cell) {
 	if len(passSituations) == 0 {
 		return nil
 	}
 
-	for i := 0; i != len(passSituations[0].cells); i++ {
+	for cellIdx := 0; cellIdx != len(passSituations[0].cells); cellIdx++ {
 		alwaysEqual := true
-		cellType0 := passSituations[0].cells[i].CellType
+		cellType0 := passSituations[0].cells[cellIdx].CellType
 
-		for j := 1; j != len(passSituations); j++ {
-			cellTypeN := passSituations[j].cells[i].CellType
+		for situationIdx := 1; situationIdx != len(passSituations); situationIdx++ {
+			cellTypeN := passSituations[situationIdx].cells[cellIdx].CellType
 			alwaysEqual = alwaysEqual && (cellType0 == cellTypeN)
 			if !alwaysEqual {
 				break
@@ -287,18 +301,18 @@ func alwaysCellsInMyView(passSituations []*Situation) (alwaysCells []*Cell) {
 		}
 
 		if alwaysEqual {
-			alwaysCells = append(alwaysCells, passSituations[0].cells[i])
+			alwaysCells = append(alwaysCells, passSituations[0].cells[cellIdx])
 		}
 	}
 	return
 }
 
-// 在所有邻居看来,某一位置的单元格 总是雷 或 总是安全的
+// 在所有邻居看来,某一位置的单元格[总是雷]或[总是安全]
 func alwaysCellsInNeighborsView(passSituations []*Situation, unfinishedNumberNeighbors []*Cell) (alwaysCells []*Cell) {
 	for _, tryCell := range unfinishedNumberNeighbors {
-		okCount, safeCountMap, mineCountMap := getCountMapByPassSituations(tryCell, passSituations)
-		safe := _getAlwaysCell(safeCountMap, okCount)
-		mine := _getAlwaysCell(mineCountMap, okCount)
+		passCount, safeCountMap, mineCountMap := getCountMapByPassSituations(tryCell, passSituations)
+		safe := _getAlwaysCell(safeCountMap, passCount) // 总是安全
+		mine := _getAlwaysCell(mineCountMap, passCount) // 总是雷
 		alwaysCells = append(alwaysCells, safe...)
 		alwaysCells = append(alwaysCells, mine...)
 	}
@@ -321,15 +335,15 @@ func _getAlwaysCell(MapCellToCount map[*Cell]int, passSituationLength int) (alwa
 func getCountMapByPassSituations(tryCell *Cell, passSituations []*Situation) (int, map[*Cell]int, map[*Cell]int) {
 	safeCountMap := make(map[string]int)
 	mineCountMap := make(map[string]int)
-	okCount := len(passSituations)
+	passCount := len(passSituations) // 合法的情况数
 	for _, situation := range passSituations {
 		_unique, safeCell, mineCell := resolveSituation(tryCell, situation)
 		if !_unique {
 			continue
 		}
-		if len(safeCell) == 0 || len(mineCell) == 0 {
-			okCount--
-			continue // 此策略是不合理的
+		if len(safeCell) == 0 || len(mineCell) == 0 { // 此策略是不合法的
+			passCount--
+			continue
 		}
 		for _, cell := range safeCell {
 			key := fmt.Sprintf("%d-%d", cell.row, cell.col)
@@ -344,7 +358,7 @@ func getCountMapByPassSituations(tryCell *Cell, passSituations []*Situation) (in
 	safe := _toCell(safeCountMap, CellTypeSafe)
 	mine := _toCell(mineCountMap, CellTypeMine)
 
-	return okCount, safe, mine
+	return passCount, safe, mine
 }
 
 func _toCell(countMap map[string]int, cellType CellType) map[*Cell]int {
@@ -410,6 +424,10 @@ func renewNeighbor(neighbors []*Cell, situation *Situation) {
 }
 
 // 根据situation,解出所有的Unknown
+// unique: 是否只有一个解
+//	- 若存在多个解,返回false,nil,nil;
+//	- 若只有一个解且此解错误,返回true,nil,nil
+//	- 若只有一个解且此解正确,返回此解(true,slice,slice)
 func resolveSituation(cell *Cell, situation *Situation) (unique bool, safe []*Cell, mine []*Cell) {
 	neighbors := GetNeighborListBySituation(cell.row, cell.col, situation)
 	_flag, _unknown, _mine := 0, 0, 0
@@ -424,12 +442,13 @@ func resolveSituation(cell *Cell, situation *Situation) (unique bool, safe []*Ce
 		}
 	}
 
-	value := int(cell.CellType)
+	value := cell.CellType
 	// 存在多个解
 	if _flag+_mine < value && value < _unknown+_flag+_mine {
 		unique = false
 		return
 	}
+
 	for _, n := range neighbors {
 		if n.CellType == CellTypeUnknown {
 			if _mine+_flag < value {
@@ -539,7 +558,7 @@ func IsSituationPass(cell *Cell, situation *Situation) bool {
 			_unknown++
 		}
 	}
-	value := int(cell.CellType)
+	value := cell.CellType
 	if _mine+_flag > value || _unknown+_mine+_flag < value {
 		return false
 	}
@@ -559,10 +578,9 @@ func (s *Situation) RangeCell(rangeFunc func(idx int, cell *Cell) (stop bool)) {
 }
 
 func (s *Situation) String() string {
-	var mine []string
-	var safe []string
+	var mine, safe []string
 	for _, cell := range s.cells {
-		str := fmt.Sprintf("(%d,%d)", cell.row, cell.col)
+		str := fmt.Sprintf("%s", cell)
 		if cell.CellType == CellTypeMine {
 			mine = append(mine, str)
 		} else if cell.CellType == CellTypeSafe {
@@ -578,23 +596,19 @@ func (s *Situation) String() string {
 
 // 对于(row, col)来说,雷的所有可能分布情况
 func getSituationList(row, col int) []*Situation {
-	searchLocation := [][2]int{
-		{row - 1, col - 1}, {row - 1, col}, {row - 1, col + 1}, {row, col + 1},
-		{row + 1, col + 1}, {row + 1, col}, {row + 1, col - 1}, {row, col - 1},
-	}
-	_mine := 0               // 已探明雷的数量
+	_flag := 0               // 已探明雷的数量
 	var _unknown []*Location // 可能是雷的位置
-	for _, loc := range searchLocation {
-		switch GetCellType(loc[0], loc[1]) {
+	RangeNeighbors(row, col, func(idx int, cell *Cell) {
+		switch cell.CellType {
 		case CellTypeFlag:
-			_mine++
+			_flag++
 		case CellTypeUnknown:
-			_unknown = append(_unknown, &Location{loc[0], loc[1]})
+			_unknown = append(_unknown, cell.Location)
 		}
-	}
+	})
 
 	unknownRemain := len(_unknown)                                   // 剩余未知的数量
-	mineRemain := int(GetCellType(row, col)) - _mine                 // 剩余的雷数量
+	mineRemain := GetCellType(row, col) - _flag                      // 剩余的雷数量
 	situations := GetCombinationFromCache(unknownRemain, mineRemain) // 总共有这么多种情况
 
 	var res []*Situation
@@ -617,7 +631,7 @@ func getSituationList(row, col int) []*Situation {
 	return res
 }
 
-func GetNeighborsByFunc(row, col int, rangeFunc func(idx int, cell *Cell)) {
+func RangeNeighbors(row, col int, rangeFunc func(idx int, cell *Cell)) {
 	if rangeFunc == nil {
 		panic("rangeFunc must not nil")
 	}
@@ -635,7 +649,7 @@ func GetNeighborsByFunc(row, col int, rangeFunc func(idx int, cell *Cell)) {
 
 func GetNeighborMap(row, col int) map[CellType][]*Cell {
 	res := make(map[CellType][]*Cell)
-	GetNeighborsByFunc(row, col, func(idx int, cell *Cell) {
+	RangeNeighbors(row, col, func(idx int, cell *Cell) {
 		res[cell.CellType] = append(res[cell.CellType], cell)
 	})
 	return res
@@ -643,7 +657,7 @@ func GetNeighborMap(row, col int) map[CellType][]*Cell {
 
 func GetNeighborList(row, col int) []*Cell {
 	var res []*Cell
-	GetNeighborsByFunc(row, col, func(idx int, cell *Cell) {
+	RangeNeighbors(row, col, func(idx int, cell *Cell) {
 		res = append(res, cell)
 	})
 	return res
@@ -659,7 +673,7 @@ func GetNeighborListBySituation(row, col int, situation *Situation) []*Cell {
 func GetUnfinishedNumberNeighbors(row, col int) []*Cell {
 	var cells []*Cell
 	var unknown []*Cell
-	GetNeighborsByFunc(row, col, func(idx int, cell *Cell) {
+	RangeNeighbors(row, col, func(idx int, cell *Cell) {
 		if cell.IsLegal() && IsNumberCellType(cell.CellType) && !IsFinish(cell.row, cell.col) {
 			cells = append(cells, cell)
 		}
@@ -669,7 +683,7 @@ func GetUnfinishedNumberNeighbors(row, col int) []*Cell {
 	})
 
 	for _, c := range unknown {
-		GetNeighborsByFunc(c.row, c.col, func(idx int, cell *Cell) {
+		RangeNeighbors(c.row, c.col, func(idx int, cell *Cell) {
 			if cell.IsLegal() && IsNumberCellType(cell.CellType) && !IsFinish(cell.row, cell.col) && !cell.Equal(row, col) {
 				cells = append(cells, cell)
 			}
@@ -690,8 +704,7 @@ func IsFinish(row, col int) bool {
 }
 
 func IsNumberCellType(cellType CellType) bool {
-	t := int(cellType)
-	return 0 < t && t < 8
+	return CellTypeZero < cellType && cellType < CellTypeMine
 }
 
 func ClearCell(row, col int, unknownCell []*Cell) {
@@ -755,7 +768,7 @@ func unique(cells []*Cell) []*Cell {
 	return res
 }
 
-func updateTable() {
+func updateFlag() {
 	Range(false, func(row, col int) {
 		if flag[row][col] == true {
 			setTableCell(row, col, CellTypeFlag)
