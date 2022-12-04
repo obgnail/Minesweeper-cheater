@@ -84,9 +84,9 @@ func Play() (success bool) {
 		// 分三次迭代后，一次循环场上能排出更多的flag,提高效率
 		f1 := ignoreZeroCellDeco(FindEqual)
 		f2 := ignoreZeroCellDeco(FindAlways)
-		Range(false, f1)
-		Range(true, f1)
-		Range(false, f2)
+		RangeTable(false, f1)
+		RangeTable(true, f1)
+		RangeTable(false, f2)
 	}
 	Logger.Info("--- DONE ---")
 	return true
@@ -165,7 +165,7 @@ func checkFail() bool {
 func Done() bool {
 	// NOTE：当剩下的全部都是雷的时候，系统会直接判赢
 	unknown := 0
-	Range(false, func(row, col int) {
+	RangeTable(false, func(row, col int) {
 		if GetCellType(row, col) == CellTypeUnknown {
 			unknown++
 		}
@@ -186,8 +186,19 @@ func Done() bool {
 
 func RenewTable() {
 	MoveMouse(rowNum, colNum) // 将鼠标移动到范围外，防止错误解析图片
-	table = Window2Table(IsFinish)
-	updateFlag()
+
+	newTable := Window2Table(func(row, col int) bool {
+		ct := table[row][col]
+		return ct != CellTypeUnknown && ct != CellTypeDone
+	})
+
+	RangeTable(false, func(row, col int) {
+		ct := table[row][col]
+		if ct != CellTypeUnknown && ct != CellTypeDone {
+			newTable[row][col] = table[row][col]
+		}
+	})
+	table = newTable
 }
 
 // 策略1-2: 数值=雷数 or 数值=未知单元格数+雷数
@@ -215,7 +226,7 @@ func FindEqual(row, col int) {
 // 策略7
 func RandomPick() (err error) {
 	var pickTable []*Location
-	Range(false, func(row, col int) {
+	RangeTable(false, func(row, col int) {
 		if GetCellType(row, col) == CellTypeUnknown {
 			pickTable = append(pickTable, &Location{row: row, col: col})
 		}
@@ -473,7 +484,7 @@ func resolveSituation(cell *Cell, situation *Situation) (unique bool, safe []*Ce
 	return true, safe, mine
 }
 
-func Range(reverse bool, rangeFunc func(row, col int)) {
+func RangeTable(reverse bool, rangeFunc func(row, col int)) {
 	if rangeFunc == nil {
 		panic("rangeFunc must not nil")
 	}
@@ -766,14 +777,6 @@ func unique(cells []*Cell) []*Cell {
 		res = append(res, cell)
 	}
 	return res
-}
-
-func updateFlag() {
-	Range(false, func(row, col int) {
-		if flag[row][col] == true {
-			setTableCell(row, col, CellTypeFlag)
-		}
-	})
 }
 
 func InitVar() {

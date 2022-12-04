@@ -76,7 +76,7 @@ func TestFunc(t *testing.T) {
 	InitConfig()
 	InitVar()
 	InitTestTable()
-	Range(false, FindAlways)
+	RangeTable(false, FindAlways)
 	t.Log("--- done ---")
 }
 
@@ -85,7 +85,7 @@ func TestFunc2(t *testing.T) {
 	InitConfig()
 	InitVar()
 	InitTestTable2()
-	Range(false, FindAlways)
+	RangeTable(false, FindAlways)
 	t.Log("--- done ---")
 }
 
@@ -94,7 +94,7 @@ func TestFunc3(t *testing.T) {
 	InitConfig()
 	InitVar()
 	InitTestTable3()
-	Range(false, FindAlways)
+	RangeTable(false, FindAlways)
 	t.Log("--- done ---")
 }
 
