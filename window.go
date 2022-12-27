@@ -18,7 +18,7 @@ const (
 func InitWindow() {
 	hWnd, err := FindWindow("", processTitle)
 	if err != nil {
-		Logger.Fatal(err)
+		Logger.Fatalf("no found process %s", processTitle)
 	}
 	Logger.Debugf("Found '%s' window: handle=0x%x", processTitle, hWnd)
 
