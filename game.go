@@ -76,6 +76,23 @@ func MineSweeper() {
 	}
 }
 
+// InitVar 每次重玩需要重置变量值
+func InitVar() {
+	progress = false
+	remainMine = 99
+	for row := 0; row != rowNum; row++ {
+		table[row] = [colNum]CellType{}
+		finish[row] = [colNum]bool{}
+		flag[row] = [colNum]bool{}
+
+		for col := 0; col != colNum; col++ {
+			table[row][col] = CellTypeUnknown
+			finish[row][col] = false
+			flag[row][col] = false
+		}
+	}
+}
+
 func Play() (success bool) {
 	HandlePopup(AgainGame)
 	for !Done() {
@@ -788,20 +805,4 @@ func unique(cells []*Cell) []*Cell {
 		res = append(res, cell)
 	}
 	return res
-}
-
-func InitVar() {
-	progress = false
-	remainMine = 99
-	for row := 0; row != rowNum; row++ {
-		table[row] = [colNum]CellType{}
-		finish[row] = [colNum]bool{}
-		flag[row] = [colNum]bool{}
-
-		for col := 0; col != colNum; col++ {
-			table[row][col] = CellTypeUnknown
-			finish[row][col] = false
-			flag[row][col] = false
-		}
-	}
 }

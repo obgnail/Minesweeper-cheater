@@ -101,7 +101,7 @@ func OpenImage(imagePath string) (image.Image, error) {
 
 func Window2Table(skipFunc func(row, col int) bool) [rowNum][colNum]CellType {
 	Logger.Debug("Parsing Window...")
-	img, err := screenshot.Capture(startX, startY, endX-startX, endY-startY)
+	img, err := screenshot.Capture(startX, startY, endX-startX, endY-startY) // TODO 硬编码,在不同显示器不同分辨率下八成不行
 	if err != nil {
 		Logger.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func ParseImageToTable(img *image.RGBA, skipFunc func(row, col int) bool) [rowNu
 			newImg := GetSubImage(img, boxX+5, boxY+5, nextBoxX-5, nextBoxY-5)
 			ret := getNumFromImage(newImg)
 			res[row][col] = ret
-			//name := fmt.Sprintf("image2/%d_(%d,%d).jpg", ret, row, col)
+			//name := fmt.Sprintf("image/%d_(%d,%d).jpg", ret, row, col)
 			//SaveImage(name, newImg)
 		}
 	}
