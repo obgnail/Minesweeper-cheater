@@ -68,7 +68,11 @@ func MineSweeper() {
 		InitWindow()
 		InitVar()
 		success := Play()
-		When(success)
+		if success {
+			WhenSuccess()
+		} else {
+			WhenFailed()
+		}
 	}
 }
 
@@ -80,16 +84,26 @@ func Play() (success bool) {
 		}
 
 		RenewTable()
-		// 正常来说只要将FindEqual和FindAlways放在一个循环上就行了。
-		// 分三次迭代后，一次循环场上能排出更多的flag,提高效率
-		f1 := ignoreZeroCellDeco(FindEqual)
-		f2 := ignoreZeroCellDeco(FindAlways)
-		RangeTable(false, f1)
-		RangeTable(true, f1)
-		RangeTable(false, f2)
+		OptimizedDetector() // or EasierDetector()
 	}
 	Logger.Info("--- DONE ---")
 	return true
+}
+
+// OptimizedDetector 正常来说只要将FindEqual和FindAlways放在一个循环上就行了。
+// 分三次迭代后，一次循环场上能排出更多的flag,提高效率
+func OptimizedDetector() {
+	f1 := ignoreZeroCellDeco(FindEqual)
+	f2 := ignoreZeroCellDeco(FindAlways)
+	RangeTable(false, f1)
+	RangeTable(true, f1)
+	RangeTable(false, f2)
+}
+
+// EasierDetector 简单地循环检测,没有重复检测,效率较低
+func EasierDetector() {
+	RangeTable(false, FindEqual)
+	RangeTable(false, FindAlways)
 }
 
 // 没有进展时随机选择
@@ -107,8 +121,13 @@ func PickAndCheck() (failed bool) {
 	return false
 }
 
-func WhenSuccess() {
+// ShowModalQuickly 双击边框,跳过动画,让模态框快点出现
+func ShowModalQuickly() {
 	doubleClick(LeftButton, rowNum, colNum)
+}
+
+func WhenSuccess() {
+	ShowModalQuickly()
 	time.Sleep(500 * time.Millisecond)
 
 	switch whenSuccess {
@@ -125,7 +144,7 @@ func WhenSuccess() {
 }
 
 func WhenFailed() {
-	doubleClick(LeftButton, rowNum, colNum)
+	ShowModalQuickly()
 	time.Sleep(500 * time.Millisecond)
 
 	switch whenFailed {
@@ -134,7 +153,7 @@ func WhenFailed() {
 	case optionRestart:
 		HandlePopup(func() {
 			RestartGame()
-			doubleClick(LeftButton, rowNum, colNum) // 去除那该死的【重玩】提示框
+			ShowModalQuickly() // 去除那该死的【重玩】提示框
 		})
 	case optionAgain:
 		HandlePopup(AgainGame)
@@ -146,17 +165,9 @@ func WhenFailed() {
 	}
 }
 
-func When(success bool) {
-	if success {
-		WhenSuccess()
-		return
-	}
-	WhenFailed()
-}
-
 func checkFail() bool {
 	time.Sleep(100 * time.Millisecond)
-	doubleClick(LeftButton, rowNum, colNum)
+	ShowModalQuickly()
 	time.Sleep(600 * time.Millisecond)
 	failed := GameFailed()
 	return failed
